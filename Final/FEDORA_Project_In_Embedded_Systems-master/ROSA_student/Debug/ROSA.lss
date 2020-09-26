@@ -1,0 +1,2460 @@
+
+ROSA.elf:     file format elf32-avr32
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .reset        00000008  80000000  80000000  00000400  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .rela.got     00000000  80000008  80000008  00000408  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  2 .text         00000ee0  80000008  80000008  00000408  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  3 .exception    00000400  80001000  80001000  00001400  2**9
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  4 .rodata       00000020  80001400  80001400  00001800  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  5 .dalign       00000004  00000004  00000004  00000000  2**0
+                  ALLOC
+  6 .data         00000008  00000008  80001420  00001c08  2**0
+                  CONTENTS, ALLOC, LOAD, DATA
+  7 .bss          00000478  00000010  00000010  00000000  2**2
+                  ALLOC
+  8 .heap         0000db78  00000488  00000488  00000000  2**0
+                  ALLOC
+  9 .comment      000000bc  00000000  00000000  00001c10  2**0
+                  CONTENTS, READONLY
+ 10 .debug_aranges 000002e0  00000000  00000000  00001cd0  2**3
+                  CONTENTS, READONLY, DEBUGGING
+ 11 .debug_pubnames 000004bc  00000000  00000000  00001fb0  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 12 .debug_info   00004f3f  00000000  00000000  0000246c  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 13 .debug_abbrev 00000cbb  00000000  00000000  000073ab  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 14 .debug_line   00001f57  00000000  00000000  00008066  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 15 .debug_frame  00000620  00000000  00000000  00009fc0  2**2
+                  CONTENTS, READONLY, DEBUGGING
+ 16 .debug_str    00000efb  00000000  00000000  0000a5e0  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 17 .debug_loc    00000810  00000000  00000000  0000b4db  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 18 .debug_macinfo 0060d8b9  00000000  00000000  0000bceb  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 19 .appstack     00001000  0000e000  0000e000  00000000  2**0
+                  ALLOC
+ 20 .stack        00001000  0000f000  0000f000  00000000  2**0
+                  ALLOC
+ 21 .debug_ranges 00000240  00000000  00000000  006195a4  2**0
+                  CONTENTS, READONLY, DEBUGGING
+
+Disassembly of section .reset:
+
+80000000 <_start>:
+80000000:	48 1f       	lddpc	pc,80000004 <_start+0x4>
+80000002:	00 00       	add	r0,r0
+80000004:	80 00       	ld.sh	r0,r0[0x0]
+80000006:	0e 68       	and	r8,r7
+
+Disassembly of section .text:
+
+80000008 <insertTaskIntoListByCurrentPriority>:
+ */ 
+
+#include "kernel/helper.h"
+
+extern void insertTaskIntoListByCurrentPriority(tcb** List, tcb *task)
+{
+80000008:	eb cd 40 80 	pushm	r7,lr
+8000000c:	1a 97       	mov	r7,sp
+8000000e:	20 6d       	sub	sp,24
+80000010:	ef 4c ff ec 	st.w	r7[-20],r12
+80000014:	ef 4b ff e8 	st.w	r7[-24],r11
+	//If the list is empty insert new task as head of list
+	if(*List == NULL)
+80000018:	ee f8 ff ec 	ld.w	r8,r7[-20]
+8000001c:	70 08       	ld.w	r8,r8[0x0]
+8000001e:	58 08       	cp.w	r8,0
+80000020:	c0 c1       	brne	80000038 <insertTaskIntoListByCurrentPriority+0x30>
+	{
+		*List = task;
+80000022:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000026:	ee f9 ff e8 	ld.w	r9,r7[-24]
+8000002a:	91 09       	st.w	r8[0x0],r9
+		
+		(*List)->nexttcb = NULL;
+8000002c:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000030:	70 08       	ld.w	r8,r8[0x0]
+80000032:	30 09       	mov	r9,0
+80000034:	91 09       	st.w	r8[0x0],r9
+		
+		return;
+80000036:	c4 e8       	rjmp	800000d2 <insertTaskIntoListByCurrentPriority+0xca>
+		
+	}
+	
+	//If the new task being inserted is the highest priority task
+	
+	tcb * tmp = *List;
+80000038:	ee f8 ff ec 	ld.w	r8,r7[-20]
+8000003c:	70 08       	ld.w	r8,r8[0x0]
+8000003e:	ef 48 ff f0 	st.w	r7[-16],r8
+	
+	if(tmp->currentpriority < task->currentpriority)
+80000042:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000046:	71 99       	ld.w	r9,r8[0x64]
+80000048:	ee f8 ff e8 	ld.w	r8,r7[-24]
+8000004c:	71 98       	ld.w	r8,r8[0x64]
+8000004e:	10 39       	cp.w	r9,r8
+80000050:	c1 02       	brcc	80000070 <insertTaskIntoListByCurrentPriority+0x68>
+	{
+		
+		tcb * lowerCurrentPriority = tmp;
+80000052:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000056:	ef 48 ff f8 	st.w	r7[-8],r8
+		
+		*List = task;
+8000005a:	ee f8 ff ec 	ld.w	r8,r7[-20]
+8000005e:	ee f9 ff e8 	ld.w	r9,r7[-24]
+80000062:	91 09       	st.w	r8[0x0],r9
+		
+		task->nexttcb = lowerCurrentPriority;
+80000064:	ee f8 ff e8 	ld.w	r8,r7[-24]
+80000068:	ee f9 ff f8 	ld.w	r9,r7[-8]
+8000006c:	91 09       	st.w	r8[0x0],r9
+		
+		return;
+8000006e:	c3 28       	rjmp	800000d2 <insertTaskIntoListByCurrentPriority+0xca>
+	//If the task should be inserted into the middle or end of list
+	tcb * previous;
+	
+	do 
+	{
+		previous = tmp;
+80000070:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000074:	ef 48 ff f4 	st.w	r7[-12],r8
+		
+		tmp = tmp->nexttcb;
+80000078:	ee f8 ff f0 	ld.w	r8,r7[-16]
+8000007c:	70 08       	ld.w	r8,r8[0x0]
+8000007e:	ef 48 ff f0 	st.w	r7[-16],r8
+		
+		if(tmp->currentpriority < task->currentpriority || tmp == NULL)
+80000082:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000086:	71 99       	ld.w	r9,r8[0x64]
+80000088:	ee f8 ff e8 	ld.w	r8,r7[-24]
+8000008c:	71 98       	ld.w	r8,r8[0x64]
+8000008e:	10 39       	cp.w	r9,r8
+80000090:	c0 53       	brcs	8000009a <insertTaskIntoListByCurrentPriority+0x92>
+80000092:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000096:	58 08       	cp.w	r8,0
+80000098:	c1 91       	brne	800000ca <insertTaskIntoListByCurrentPriority+0xc2>
+		{
+			tcb * lowerCurrentPriority = tmp;
+8000009a:	ee f8 ff f0 	ld.w	r8,r7[-16]
+8000009e:	ef 48 ff fc 	st.w	r7[-4],r8
+			
+			previous->nexttcb = task;
+800000a2:	ee f8 ff f4 	ld.w	r8,r7[-12]
+800000a6:	ee f9 ff e8 	ld.w	r9,r7[-24]
+800000aa:	91 09       	st.w	r8[0x0],r9
+			
+			if(tmp == NULL) task->nexttcb = NULL; //Insert into end of list
+800000ac:	ee f8 ff f0 	ld.w	r8,r7[-16]
+800000b0:	58 08       	cp.w	r8,0
+800000b2:	c0 61       	brne	800000be <insertTaskIntoListByCurrentPriority+0xb6>
+800000b4:	ee f8 ff e8 	ld.w	r8,r7[-24]
+800000b8:	30 09       	mov	r9,0
+800000ba:	91 09       	st.w	r8[0x0],r9
+			else task->nexttcb = lowerCurrentPriority;
+			
+			return;
+800000bc:	c0 b8       	rjmp	800000d2 <insertTaskIntoListByCurrentPriority+0xca>
+			tcb * lowerCurrentPriority = tmp;
+			
+			previous->nexttcb = task;
+			
+			if(tmp == NULL) task->nexttcb = NULL; //Insert into end of list
+			else task->nexttcb = lowerCurrentPriority;
+800000be:	ee f8 ff e8 	ld.w	r8,r7[-24]
+800000c2:	ee f9 ff fc 	ld.w	r9,r7[-4]
+800000c6:	91 09       	st.w	r8[0x0],r9
+			
+			return;
+800000c8:	c0 58       	rjmp	800000d2 <insertTaskIntoListByCurrentPriority+0xca>
+		}
+		 
+	} while (tmp != NULL); // Until we get to the end of the list
+800000ca:	ee f8 ff f0 	ld.w	r8,r7[-16]
+800000ce:	58 08       	cp.w	r8,0
+800000d0:	cd 01       	brne	80000070 <insertTaskIntoListByCurrentPriority+0x68>
+}
+800000d2:	2f ad       	sub	sp,-24
+800000d4:	e3 cd 80 80 	ldm	sp++,r7,pc
+
+800000d8 <removeTaskFromList>:
+
+void removeTaskFromList(tcb** list, tcb*TaskToRemove)
+{
+800000d8:	eb cd 40 80 	pushm	r7,lr
+800000dc:	1a 97       	mov	r7,sp
+800000de:	20 4d       	sub	sp,16
+800000e0:	ef 4c ff f4 	st.w	r7[-12],r12
+800000e4:	ef 4b ff f0 	st.w	r7[-16],r11
+	tcb*tcbTemp=*list;
+800000e8:	ee f8 ff f4 	ld.w	r8,r7[-12]
+800000ec:	70 08       	ld.w	r8,r8[0x0]
+800000ee:	ef 48 ff f8 	st.w	r7[-8],r8
+	
+	tcb*previous;
+	
+	// If the head node is the one being removed
+	if(tcbTemp!=NULL && tcbTemp==TaskToRemove )
+800000f2:	ee f8 ff f8 	ld.w	r8,r7[-8]
+800000f6:	58 08       	cp.w	r8,0
+800000f8:	c1 f0       	breq	80000136 <removeTaskFromList+0x5e>
+800000fa:	ee f9 ff f8 	ld.w	r9,r7[-8]
+800000fe:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000102:	10 39       	cp.w	r9,r8
+80000104:	c1 91       	brne	80000136 <removeTaskFromList+0x5e>
+	{
+		tcbTemp=tcbTemp->nexttcb;
+80000106:	ee f8 ff f8 	ld.w	r8,r7[-8]
+8000010a:	70 08       	ld.w	r8,r8[0x0]
+8000010c:	ef 48 ff f8 	st.w	r7[-8],r8
+		*list=tcbTemp;
+80000110:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000114:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000118:	91 09       	st.w	r8[0x0],r9
+		TaskToRemove->nexttcb = NULL;
+8000011a:	ee f8 ff f0 	ld.w	r8,r7[-16]
+8000011e:	30 09       	mov	r9,0
+80000120:	91 09       	st.w	r8[0x0],r9
+		
+		return;
+80000122:	c2 48       	rjmp	8000016a <removeTaskFromList+0x92>
+	}
+
+	// Walk through list untill tas is found
+	while(tcbTemp!=NULL && tcbTemp!=TaskToRemove)
+	{
+		previous=tcbTemp;
+80000124:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000128:	ef 48 ff fc 	st.w	r7[-4],r8
+		tcbTemp=tcbTemp->nexttcb;
+8000012c:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000130:	70 08       	ld.w	r8,r8[0x0]
+80000132:	ef 48 ff f8 	st.w	r7[-8],r8
+		return;
+		
+	}
+
+	// Walk through list untill tas is found
+	while(tcbTemp!=NULL && tcbTemp!=TaskToRemove)
+80000136:	ee f8 ff f8 	ld.w	r8,r7[-8]
+8000013a:	58 08       	cp.w	r8,0
+8000013c:	c0 70       	breq	8000014a <removeTaskFromList+0x72>
+8000013e:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000142:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000146:	10 39       	cp.w	r9,r8
+80000148:	ce e1       	brne	80000124 <removeTaskFromList+0x4c>
+	{
+		previous=tcbTemp;
+		tcbTemp=tcbTemp->nexttcb;
+		
+	}
+	if(tcbTemp==NULL) return; // if no such task exists return.
+8000014a:	ee f8 ff f8 	ld.w	r8,r7[-8]
+8000014e:	58 08       	cp.w	r8,0
+80000150:	c0 c0       	breq	80000168 <removeTaskFromList+0x90>
+	
+	previous->nexttcb=tcbTemp->nexttcb; // Update previous
+80000152:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000156:	70 09       	ld.w	r9,r8[0x0]
+80000158:	ee f8 ff fc 	ld.w	r8,r7[-4]
+8000015c:	91 09       	st.w	r8[0x0],r9
+	tcbTemp->nexttcb=NULL;
+8000015e:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000162:	30 09       	mov	r9,0
+80000164:	91 09       	st.w	r8[0x0],r9
+80000166:	c0 28       	rjmp	8000016a <removeTaskFromList+0x92>
+	{
+		previous=tcbTemp;
+		tcbTemp=tcbTemp->nexttcb;
+		
+	}
+	if(tcbTemp==NULL) return; // if no such task exists return.
+80000168:	d7 03       	nop
+	
+	previous->nexttcb=tcbTemp->nexttcb; // Update previous
+	tcbTemp->nexttcb=NULL;
+8000016a:	2f cd       	sub	sp,-16
+8000016c:	e3 cd 80 80 	ldm	sp++,r7,pc
+
+80000170 <usart_options>:
+80000170:	00 00 e1 00 08 04 00 00 00 00 00 00 74 73 6b 61     ............tska
+80000180:	00 00 00 00 74 73 6b 62 00 00 00 00 74 73 6b 63     ....tskb....tskc
+80000190:	00 00 00 00                                         ....
+
+80000194 <task_a>:
+ * Task A, highest priority
+ * lights up LED0 when executing
+ * turns LED0 off when it stops executing
+ ************************************************************/
+void task_a(void)
+{
+80000194:	eb cd 40 80 	pushm	r7,lr
+80000198:	1a 97       	mov	r7,sp
+		//Task A attempts to lock S1
+
+		//if(ROSA_takeSemaphore(S1, 0))
+		//{
+			//When semaphore gets locked turn on LED0
+			ledOn(LED0_GPIO);
+8000019a:	33 bc       	mov	r12,59
+8000019c:	f0 1f 00 06 	mcall	800001b4 <task_a+0x20>
+			//Do work for 2 seconds
+			delay_ms(2000);
+800001a0:	e0 6c 07 d0 	mov	r12,2000
+800001a4:	f0 1f 00 05 	mcall	800001b8 <task_a+0x24>
+			//Turn off LED after done with work
+			ledOff(LED0_GPIO);
+800001a8:	33 bc       	mov	r12,59
+800001aa:	f0 1f 00 05 	mcall	800001bc <task_a+0x28>
+			//Unlock semaphore S1
+			
+
+
+}
+800001ae:	e3 cd 80 80 	ldm	sp++,r7,pc
+800001b2:	00 00       	add	r0,r0
+800001b4:	80 00       	ld.sh	r0,r0[0x0]
+800001b6:	0a 98       	mov	r8,r5
+800001b8:	80 00       	ld.sh	r0,r0[0x0]
+800001ba:	08 90       	mov	r0,r4
+800001bc:	80 00       	ld.sh	r0,r0[0x0]
+800001be:	0a b8       	st.h	r5++,r8
+
+800001c0 <task_b>:
+ * Task B, medium priority
+ * lights up LED1 when executing
+ * turns LED1 off when it stops executing
+ ************************************************************/
+void task_b(void)
+{
+800001c0:	eb cd 40 80 	pushm	r7,lr
+800001c4:	1a 97       	mov	r7,sp
+
+
+		//Turn on LED and do work for 2 seconds
+		ledOn(LED1_GPIO);
+800001c6:	33 cc       	mov	r12,60
+800001c8:	f0 1f 00 06 	mcall	800001e0 <task_b+0x20>
+		delay_ms(2000);
+800001cc:	e0 6c 07 d0 	mov	r12,2000
+800001d0:	f0 1f 00 05 	mcall	800001e4 <task_b+0x24>
+		//Turn off LED when done with work
+		ledOff(LED1_GPIO);
+800001d4:	33 cc       	mov	r12,60
+800001d6:	f0 1f 00 05 	mcall	800001e8 <task_b+0x28>
+
+}
+800001da:	e3 cd 80 80 	ldm	sp++,r7,pc
+800001de:	00 00       	add	r0,r0
+800001e0:	80 00       	ld.sh	r0,r0[0x0]
+800001e2:	0a 98       	mov	r8,r5
+800001e4:	80 00       	ld.sh	r0,r0[0x0]
+800001e6:	08 90       	mov	r0,r4
+800001e8:	80 00       	ld.sh	r0,r0[0x0]
+800001ea:	0a b8       	st.h	r5++,r8
+
+800001ec <task_c>:
+ * Task C, lowest priority
+ * lights up LED2 when executing
+ * turns LED2 off when it stops executing
+ ************************************************************/
+void task_c(void)
+{
+800001ec:	eb cd 40 80 	pushm	r7,lr
+800001f0:	1a 97       	mov	r7,sp
+
+		//Task A attempts to lock S1
+
+		//{
+			//When semaphore gets locked turn on LED2
+			ledOn(LED2_GPIO);
+800001f2:	33 dc       	mov	r12,61
+800001f4:	f0 1f 00 05 	mcall	80000208 <task_c+0x1c>
+			//Do work for 4 seconds
+			delay_ms(4000);
+800001f8:	e0 6c 0f a0 	mov	r12,4000
+800001fc:	f0 1f 00 04 	mcall	8000020c <task_c+0x20>
+			//Turn off LED after done with work
+			ledOff(LED2_GPIO);
+80000200:	33 dc       	mov	r12,61
+80000202:	f0 1f 00 04 	mcall	80000210 <task_c+0x24>
+			//Unlock semaphore S1
+		//}
+		
+		
+	}
+80000206:	cf 6b       	rjmp	800001f2 <task_c+0x6>
+80000208:	80 00       	ld.sh	r0,r0[0x0]
+8000020a:	0a 98       	mov	r8,r5
+8000020c:	80 00       	ld.sh	r0,r0[0x0]
+8000020e:	08 90       	mov	r0,r4
+80000210:	80 00       	ld.sh	r0,r0[0x0]
+80000212:	0a b8       	st.h	r5++,r8
+
+80000214 <main>:
+}
+/*************************************************************
+ * Main function
+ ************************************************************/
+int main(void)
+{
+80000214:	eb cd 40 80 	pushm	r7,lr
+80000218:	1a 97       	mov	r7,sp
+	//Initialize the ROSA kernel
+	ROSA_init();
+8000021a:	f0 1f 00 2f 	mcall	800002d4 <main+0xc0>
+
+	//Assign appropriate priorities to the tasks
+	task_a_priority = 3;
+8000021e:	4a f8       	lddpc	r8,800002d8 <main+0xc4>
+80000220:	30 39       	mov	r9,3
+80000222:	91 09       	st.w	r8[0x0],r9
+	task_b_priority = 2;
+80000224:	4a e8       	lddpc	r8,800002dc <main+0xc8>
+80000226:	30 29       	mov	r9,2
+80000228:	91 09       	st.w	r8[0x0],r9
+	task_c_priority = 1;
+8000022a:	4a e8       	lddpc	r8,800002e0 <main+0xcc>
+8000022c:	30 19       	mov	r9,1
+8000022e:	91 09       	st.w	r8[0x0],r9
+
+	//Create the three tasks A, B and C according to specification
+
+	ROSA_TaskCreate(&task_a_tcb, "tska", task_a, task_a_stack, TASK_A_STACK_SIZE, task_a_priority);
+80000230:	4a a8       	lddpc	r8,800002d8 <main+0xc4>
+80000232:	70 08       	ld.w	r8,r8[0x0]
+80000234:	1a d8       	st.w	--sp,r8
+80000236:	34 08       	mov	r8,64
+80000238:	4a b9       	lddpc	r9,800002e4 <main+0xd0>
+8000023a:	4a ca       	lddpc	r10,800002e8 <main+0xd4>
+8000023c:	4a cb       	lddpc	r11,800002ec <main+0xd8>
+8000023e:	4a dc       	lddpc	r12,800002f0 <main+0xdc>
+80000240:	f0 1f 00 2d 	mcall	800002f4 <main+0xe0>
+80000244:	2f fd       	sub	sp,-4
+	
+	ROSA_TaskCreate(&task_b_tcb, "tskb", task_b, task_b_stack, TASK_B_STACK_SIZE, task_b_priority);
+80000246:	4a 68       	lddpc	r8,800002dc <main+0xc8>
+80000248:	70 08       	ld.w	r8,r8[0x0]
+8000024a:	1a d8       	st.w	--sp,r8
+8000024c:	34 08       	mov	r8,64
+8000024e:	4a b9       	lddpc	r9,800002f8 <main+0xe4>
+80000250:	4a ba       	lddpc	r10,800002fc <main+0xe8>
+80000252:	4a cb       	lddpc	r11,80000300 <main+0xec>
+80000254:	4a cc       	lddpc	r12,80000304 <main+0xf0>
+80000256:	f0 1f 00 28 	mcall	800002f4 <main+0xe0>
+8000025a:	2f fd       	sub	sp,-4
+	
+	ROSA_TaskCreate(&task_c_tcb, "tskc", task_c, task_c_stack, TASK_C_STACK_SIZE, task_c_priority);
+8000025c:	4a 18       	lddpc	r8,800002e0 <main+0xcc>
+8000025e:	70 08       	ld.w	r8,r8[0x0]
+80000260:	1a d8       	st.w	--sp,r8
+80000262:	34 08       	mov	r8,64
+80000264:	4a 99       	lddpc	r9,80000308 <main+0xf4>
+80000266:	4a aa       	lddpc	r10,8000030c <main+0xf8>
+80000268:	4a ab       	lddpc	r11,80000310 <main+0xfc>
+8000026a:	4a bc       	lddpc	r12,80000314 <main+0x100>
+8000026c:	f0 1f 00 22 	mcall	800002f4 <main+0xe0>
+80000270:	2f fd       	sub	sp,-4
+	
+	removeTaskFromList(&TCBLIST, &task_b_tcb);
+80000272:	4a 5b       	lddpc	r11,80000304 <main+0xf0>
+80000274:	4a 9c       	lddpc	r12,80000318 <main+0x104>
+80000276:	f0 1f 00 2a 	mcall	8000031c <main+0x108>
+	
+	removeTaskFromList(&TCBLIST, &task_a_tcb);
+8000027a:	49 eb       	lddpc	r11,800002f0 <main+0xdc>
+8000027c:	4a 7c       	lddpc	r12,80000318 <main+0x104>
+8000027e:	f0 1f 00 28 	mcall	8000031c <main+0x108>
+	
+	removeTaskFromList(&TCBLIST, &task_c_tcb);
+80000282:	4a 5b       	lddpc	r11,80000314 <main+0x100>
+80000284:	4a 5c       	lddpc	r12,80000318 <main+0x104>
+80000286:	f0 1f 00 26 	mcall	8000031c <main+0x108>
+
+	ROSA_TaskCreate(&task_a_tcb, "tska", task_a, task_a_stack, TASK_A_STACK_SIZE, task_a_priority);
+8000028a:	49 48       	lddpc	r8,800002d8 <main+0xc4>
+8000028c:	70 08       	ld.w	r8,r8[0x0]
+8000028e:	1a d8       	st.w	--sp,r8
+80000290:	34 08       	mov	r8,64
+80000292:	49 59       	lddpc	r9,800002e4 <main+0xd0>
+80000294:	49 5a       	lddpc	r10,800002e8 <main+0xd4>
+80000296:	49 6b       	lddpc	r11,800002ec <main+0xd8>
+80000298:	49 6c       	lddpc	r12,800002f0 <main+0xdc>
+8000029a:	f0 1f 00 17 	mcall	800002f4 <main+0xe0>
+8000029e:	2f fd       	sub	sp,-4
+
+	ROSA_TaskCreate(&task_b_tcb, "tskb", task_b, task_b_stack, TASK_B_STACK_SIZE, task_b_priority);
+800002a0:	48 f8       	lddpc	r8,800002dc <main+0xc8>
+800002a2:	70 08       	ld.w	r8,r8[0x0]
+800002a4:	1a d8       	st.w	--sp,r8
+800002a6:	34 08       	mov	r8,64
+800002a8:	49 49       	lddpc	r9,800002f8 <main+0xe4>
+800002aa:	49 5a       	lddpc	r10,800002fc <main+0xe8>
+800002ac:	49 5b       	lddpc	r11,80000300 <main+0xec>
+800002ae:	49 6c       	lddpc	r12,80000304 <main+0xf0>
+800002b0:	f0 1f 00 11 	mcall	800002f4 <main+0xe0>
+800002b4:	2f fd       	sub	sp,-4
+
+	ROSA_TaskCreate(&task_c_tcb, "tskc", task_c, task_c_stack, TASK_C_STACK_SIZE, task_c_priority);
+800002b6:	48 b8       	lddpc	r8,800002e0 <main+0xcc>
+800002b8:	70 08       	ld.w	r8,r8[0x0]
+800002ba:	1a d8       	st.w	--sp,r8
+800002bc:	34 08       	mov	r8,64
+800002be:	49 39       	lddpc	r9,80000308 <main+0xf4>
+800002c0:	49 3a       	lddpc	r10,8000030c <main+0xf8>
+800002c2:	49 4b       	lddpc	r11,80000310 <main+0xfc>
+800002c4:	49 4c       	lddpc	r12,80000314 <main+0x100>
+800002c6:	f0 1f 00 0c 	mcall	800002f4 <main+0xe0>
+800002ca:	2f fd       	sub	sp,-4
+
+	//Start the ROSA kernel
+	ROSA_start();
+800002cc:	f0 1f 00 15 	mcall	80000320 <main+0x10c>
+	/* Execution will never return here */
+	while(1);
+800002d0:	c0 08       	rjmp	800002d0 <main+0xbc>
+800002d2:	00 00       	add	r0,r0
+800002d4:	80 00       	ld.sh	r0,r0[0x0]
+800002d6:	03 54       	ld.sh	r4,--r1
+800002d8:	00 00       	add	r0,r0
+800002da:	04 70       	tst	r0,r2
+800002dc:	00 00       	add	r0,r0
+800002de:	04 6c       	and	r12,r2
+800002e0:	00 00       	add	r0,r0
+800002e2:	04 74       	tst	r4,r2
+800002e4:	00 00       	add	r0,r0
+800002e6:	00 14       	sub	r4,r0
+800002e8:	80 00       	ld.sh	r0,r0[0x0]
+800002ea:	01 94       	ld.ub	r4,r0[0x1]
+800002ec:	80 00       	ld.sh	r0,r0[0x0]
+800002ee:	01 7c       	ld.ub	r12,--r0
+800002f0:	00 00       	add	r0,r0
+800002f2:	01 14       	ld.sh	r4,r0++
+800002f4:	80 00       	ld.sh	r0,r0[0x0]
+800002f6:	03 d8       	ld.ub	r8,r1[0x5]
+800002f8:	00 00       	add	r0,r0
+800002fa:	01 84       	ld.ub	r4,r0[0x0]
+800002fc:	80 00       	ld.sh	r0,r0[0x0]
+800002fe:	01 c0       	ld.ub	r0,r0[0x4]
+80000300:	80 00       	ld.sh	r0,r0[0x0]
+80000302:	01 84       	ld.ub	r4,r0[0x0]
+80000304:	00 00       	add	r0,r0
+80000306:	02 84       	andn	r4,r1
+80000308:	00 00       	add	r0,r0
+8000030a:	02 f4       	st.b	--r1,r4
+8000030c:	80 00       	ld.sh	r0,r0[0x0]
+8000030e:	01 ec       	ld.ub	r12,r0[0x6]
+80000310:	80 00       	ld.sh	r0,r0[0x0]
+80000312:	01 8c       	ld.ub	r12,r0[0x0]
+80000314:	00 00       	add	r0,r0
+80000316:	03 f4       	ld.ub	r4,r1[0x7]
+80000318:	00 00       	add	r0,r0
+8000031a:	04 78       	tst	r8,r2
+8000031c:	80 00       	ld.sh	r0,r0[0x0]
+8000031e:	00 d8       	st.w	--r0,r8
+80000320:	80 00       	ld.sh	r0,r0[0x0]
+80000322:	04 e0       	st.h	--r2,r0
+
+80000324 <ROSA_yieldFromISRNew>:
+ * Comment:
+ * 	Perform a yield from an ISR
+ *
+ **********************************************************/
+void ROSA_yieldFromISRNew(void)
+{
+80000324:	eb cd 40 80 	pushm	r7,lr
+80000328:	1a 97       	mov	r7,sp
+	contextSaveFromISR();	  //Save the task context
+8000032a:	f0 1f 00 05 	mcall	8000033c <ROSA_yieldFromISRNew+0x18>
+	preemptive_scheduler();			  //Find next task to execute
+8000032e:	f0 1f 00 05 	mcall	80000340 <ROSA_yieldFromISRNew+0x1c>
+	contextRestoreFromISR();  //...and switch over to it.
+80000332:	f0 1f 00 05 	mcall	80000344 <ROSA_yieldFromISRNew+0x20>
+80000336:	e3 cd 80 80 	ldm	sp++,r7,pc
+8000033a:	00 00       	add	r0,r0
+8000033c:	80 00       	ld.sh	r0,r0[0x0]
+8000033e:	11 7e       	ld.ub	lr,--r8
+80000340:	80 00       	ld.sh	r0,r0[0x0]
+80000342:	05 c8       	ld.ub	r8,r2[0x4]
+80000344:	80 00       	ld.sh	r0,r0[0x0]
+80000346:	11 b8       	ld.ub	r8,r8[0x3]
+
+80000348 <usart_options>:
+80000348:	00 00 e1 00 08 04 00 00 00 00 00 00                 ............
+
+80000354 <ROSA_init>:
+ * Comment:
+ * 	Initialize the ROSA system
+ *
+ **********************************************************/
+void ROSA_init(void)
+{
+80000354:	eb cd 40 80 	pushm	r7,lr
+80000358:	1a 97       	mov	r7,sp
+	//Do initialization of I/O drivers
+	ledInit();									//LEDs
+8000035a:	f0 1f 00 14 	mcall	800003a8 <ROSA_init+0x54>
+	buttonInit();								//Buttons
+8000035e:	f0 1f 00 14 	mcall	800003ac <ROSA_init+0x58>
+	joystickInit();								//Joystick
+80000362:	f0 1f 00 14 	mcall	800003b0 <ROSA_init+0x5c>
+	potInit();									//Potentiometer
+80000366:	f0 1f 00 14 	mcall	800003b4 <ROSA_init+0x60>
+	usartInit(USART, &usart_options, FOSC0);	//Serial communication
+8000036a:	e0 6a 1b 00 	mov	r10,6912
+8000036e:	ea 1a 00 b7 	orh	r10,0xb7
+80000372:	49 2b       	lddpc	r11,800003b8 <ROSA_init+0x64>
+80000374:	fe 7c 14 00 	mov	r12,-60416
+80000378:	f0 1f 00 11 	mcall	800003bc <ROSA_init+0x68>
+
+	//Start with empty TCBLIST and no EXECTASK and no Semaphores.
+	TCBLIST = NULL;
+8000037c:	49 18       	lddpc	r8,800003c0 <ROSA_init+0x6c>
+8000037e:	30 09       	mov	r9,0
+80000380:	91 09       	st.w	r8[0x0],r9
+	EXECTASK = NULL;
+80000382:	49 18       	lddpc	r8,800003c4 <ROSA_init+0x70>
+80000384:	30 09       	mov	r9,0
+80000386:	91 09       	st.w	r8[0x0],r9
+	SEMAPHORES = NULL;
+80000388:	49 08       	lddpc	r8,800003c8 <ROSA_init+0x74>
+8000038a:	30 09       	mov	r9,0
+8000038c:	91 09       	st.w	r8[0x0],r9
+	
+	interruptInit();
+8000038e:	f0 1f 00 10 	mcall	800003cc <ROSA_init+0x78>
+	
+	timerInit(1);
+80000392:	30 1c       	mov	r12,1
+80000394:	f0 1f 00 0f 	mcall	800003d0 <ROSA_init+0x7c>
+	
+	currentTick = 0;
+80000398:	48 fa       	lddpc	r10,800003d4 <ROSA_init+0x80>
+8000039a:	30 08       	mov	r8,0
+8000039c:	30 09       	mov	r9,0
+8000039e:	f4 e9 00 00 	st.d	r10[0],r8
+
+	//Initialize the timer to 100 ms period.
+	//...
+	//timerInit(100);
+	//...
+}
+800003a2:	e3 cd 80 80 	ldm	sp++,r7,pc
+800003a6:	00 00       	add	r0,r0
+800003a8:	80 00       	ld.sh	r0,r0[0x0]
+800003aa:	0a 0c       	add	r12,r5
+800003ac:	80 00       	ld.sh	r0,r0[0x0]
+800003ae:	08 30       	cp.w	r0,r4
+800003b0:	80 00       	ld.sh	r0,r0[0x0]
+800003b2:	08 58       	eor	r8,r4
+800003b4:	80 00       	ld.sh	r0,r0[0x0]
+800003b6:	0a d8       	st.w	--r5,r8
+800003b8:	80 00       	ld.sh	r0,r0[0x0]
+800003ba:	03 48       	ld.w	r8,--r1
+800003bc:	80 00       	ld.sh	r0,r0[0x0]
+800003be:	0c 8c       	andn	r12,r6
+800003c0:	00 00       	add	r0,r0
+800003c2:	04 78       	tst	r8,r2
+800003c4:	00 00       	add	r0,r0
+800003c6:	04 80       	andn	r0,r2
+800003c8:	00 00       	add	r0,r0
+800003ca:	04 7c       	tst	r12,r2
+800003cc:	80 00       	ld.sh	r0,r0[0x0]
+800003ce:	11 48       	ld.w	r8,--r8
+800003d0:	80 00       	ld.sh	r0,r0[0x0]
+800003d2:	0d b0       	ld.ub	r0,r6[0x3]
+800003d4:	00 00       	add	r0,r0
+800003d6:	04 64       	and	r4,r2
+
+800003d8 <ROSA_TaskCreate>:
+ * Comment:
+ * 	Create the TCB with correct values and install it into
+ *  TCBLIST
+ **********************************************************/
+void ROSA_TaskCreate(tcb * tcbTaskHandle, char tcbName[NAMESIZE], void *tcbFunction, int * tcbStack, int tcbStackSize, unsigned int Priority)
+{
+800003d8:	eb cd 40 80 	pushm	r7,lr
+800003dc:	1a 97       	mov	r7,sp
+800003de:	20 6d       	sub	sp,24
+800003e0:	ee ce ff f8 	sub	lr,r7,-8
+800003e4:	ef 4c ff f8 	st.w	r7[-8],r12
+800003e8:	ef 4b ff f4 	st.w	r7[-12],r11
+800003ec:	ef 4a ff f0 	st.w	r7[-16],r10
+800003f0:	ef 49 ff ec 	st.w	r7[-20],r9
+800003f4:	ef 48 ff e8 	st.w	r7[-24],r8
+	int i;
+
+	//Initialize the tcb with the correct values
+	for(i = 0; i < NAMESIZE; i++) {
+800003f8:	30 08       	mov	r8,0
+800003fa:	ef 48 ff fc 	st.w	r7[-4],r8
+800003fe:	c1 48       	rjmp	80000426 <ROSA_TaskCreate+0x4e>
+		//Copy the id/name
+		tcbTaskHandle->id[i] = tcbName[i];
+80000400:	ee f9 ff fc 	ld.w	r9,r7[-4]
+80000404:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000408:	ee fa ff f4 	ld.w	r10,r7[-12]
+8000040c:	f4 08 00 08 	add	r8,r10,r8
+80000410:	11 88       	ld.ub	r8,r8[0x0]
+80000412:	ee fa ff f8 	ld.w	r10,r7[-8]
+80000416:	f4 09 00 09 	add	r9,r10,r9
+8000041a:	b2 c8       	st.b	r9[0x4],r8
+void ROSA_TaskCreate(tcb * tcbTaskHandle, char tcbName[NAMESIZE], void *tcbFunction, int * tcbStack, int tcbStackSize, unsigned int Priority)
+{
+	int i;
+
+	//Initialize the tcb with the correct values
+	for(i = 0; i < NAMESIZE; i++) {
+8000041c:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000420:	2f f8       	sub	r8,-1
+80000422:	ef 48 ff fc 	st.w	r7[-4],r8
+80000426:	ee f8 ff fc 	ld.w	r8,r7[-4]
+8000042a:	58 38       	cp.w	r8,3
+8000042c:	fe 9a ff ea 	brle	80000400 <ROSA_TaskCreate+0x28>
+		//Copy the id/name
+		tcbTaskHandle->id[i] = tcbName[i];
+	}
+
+	//Dont link this TCB anywhere yet.
+	tcbTaskHandle->nexttcb = NULL;
+80000430:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000434:	30 09       	mov	r9,0
+80000436:	91 09       	st.w	r8[0x0],r9
+
+	//Set the task function start and return address.
+	tcbTaskHandle->staddr = tcbFunction;
+80000438:	ee f9 ff f0 	ld.w	r9,r7[-16]
+8000043c:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000440:	91 29       	st.w	r8[0x8],r9
+	tcbTaskHandle->retaddr = (int)tcbFunction;
+80000442:	ee f9 ff f0 	ld.w	r9,r7[-16]
+80000446:	ee f8 ff f8 	ld.w	r8,r7[-8]
+8000044a:	91 99       	st.w	r8[0x24],r9
+
+	//Set up the stack.
+	tcbTaskHandle->datasize = tcbStackSize;
+8000044c:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000450:	ee f9 ff e8 	ld.w	r9,r7[-24]
+80000454:	91 49       	st.w	r8[0x10],r9
+	tcbTaskHandle->dataarea = tcbStack + tcbStackSize;
+80000456:	ee f8 ff e8 	ld.w	r8,r7[-24]
+8000045a:	a3 68       	lsl	r8,0x2
+8000045c:	ee f9 ff ec 	ld.w	r9,r7[-20]
+80000460:	10 09       	add	r9,r8
+80000462:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000466:	91 39       	st.w	r8[0xc],r9
+	tcbTaskHandle->saveusp = tcbTaskHandle->dataarea;
+80000468:	ee f8 ff f8 	ld.w	r8,r7[-8]
+8000046c:	70 39       	ld.w	r9,r8[0xc]
+8000046e:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000472:	91 59       	st.w	r8[0x14],r9
+
+	//Set the initial SR.
+	tcbTaskHandle->savesr = ROSA_INITIALSR;
+80000474:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000478:	fc 19 00 1c 	movh	r9,0x1c
+8000047c:	91 89       	st.w	r8[0x20],r9
+
+	// Set the priorities
+	tcbTaskHandle->currentpriority = Priority;
+8000047e:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000482:	7c 09       	ld.w	r9,lr[0x0]
+80000484:	f1 49 00 64 	st.w	r8[100],r9
+	tcbTaskHandle->originalpriority = Priority;
+80000488:	ee f8 ff f8 	ld.w	r8,r7[-8]
+8000048c:	7c 09       	ld.w	r9,lr[0x0]
+8000048e:	f1 49 00 68 	st.w	r8[104],r9
+	
+	// Set the original wake up time to zero
+	tcbTaskHandle->wakeuptime = (rosaTicks) 0;
+80000492:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000496:	30 09       	mov	r9,0
+80000498:	f1 49 00 6c 	st.w	r8[108],r9
+	
+	
+	//Initialize context.
+	contextInit(tcbTaskHandle);
+8000049c:	ee fc ff f8 	ld.w	r12,r7[-8]
+800004a0:	f0 1f 00 05 	mcall	800004b4 <ROSA_TaskCreate+0xdc>
+	
+	ROSA_tcbInstallTask(tcbTaskHandle);
+800004a4:	ee fc ff f8 	ld.w	r12,r7[-8]
+800004a8:	f0 1f 00 04 	mcall	800004b8 <ROSA_TaskCreate+0xe0>
+}
+800004ac:	2f ad       	sub	sp,-24
+800004ae:	e3 cd 80 80 	ldm	sp++,r7,pc
+800004b2:	00 00       	add	r0,r0
+800004b4:	80 00       	ld.sh	r0,r0[0x0]
+800004b6:	05 1a       	ld.sh	r10,r2++
+800004b8:	80 00       	ld.sh	r0,r0[0x0]
+800004ba:	04 bc       	st.h	r2++,r12
+
+800004bc <ROSA_tcbInstallTask>:
+ * Comment:
+ * 	Install the TCB into the TCBLIST.
+ *
+ **********************************************************/
+void ROSA_tcbInstallTask(tcb * tcbTaskHandle)
+{
+800004bc:	eb cd 40 80 	pushm	r7,lr
+800004c0:	1a 97       	mov	r7,sp
+800004c2:	20 1d       	sub	sp,4
+800004c4:	ef 4c ff fc 	st.w	r7[-4],r12
+	// Insert task into ready list which is kept sorted by current priority
+	insertTaskIntoListByCurrentPriority(&TCBLIST, tcbTaskHandle);
+800004c8:	ee fb ff fc 	ld.w	r11,r7[-4]
+800004cc:	48 3c       	lddpc	r12,800004d8 <ROSA_tcbInstallTask+0x1c>
+800004ce:	f0 1f 00 04 	mcall	800004dc <ROSA_tcbInstallTask+0x20>
+}
+800004d2:	2f fd       	sub	sp,-4
+800004d4:	e3 cd 80 80 	ldm	sp++,r7,pc
+800004d8:	00 00       	add	r0,r0
+800004da:	04 78       	tst	r8,r2
+800004dc:	80 00       	ld.sh	r0,r0[0x0]
+800004de:	00 08       	add	r8,r0
+
+800004e0 <ROSA_start>:
+* Do the initial context switch to the first task in
+* the TCBLIST.
+*
+*********************************************************/
+ROSA_start:
+	call timerStart
+800004e0:	f0 1f 00 36 	mcall	800005b8 <_yield+0xa>
+	//Put the first task from TCBLIST into EXECTASK
+	lda.w r12,TCBLIST
+800004e4:	4b 6c       	lddpc	r12,800005bc <_yield+0xe>
+	lda.w r11,EXECTASK
+800004e6:	4b 7b       	lddpc	r11,800005c0 <_yield+0x12>
+	ld.w r12,r12[0x0]
+800004e8:	78 0c       	ld.w	r12,r12[0x0]
+	st.w r11[0x0],r12
+800004ea:	97 0c       	st.w	r11[0x0],r12
+
+	//Set up start USP
+	ld.w r0,r12[TCB.SAVEUSP]
+800004ec:	78 50       	ld.w	r0,r12[0x14]
+	st.w --sp,r0
+800004ee:	1a d0       	st.w	--sp,r0
+	ldmts sp,sp
+800004f0:	e5 cd 20 00 	ldmts	sp,sp
+	ld.w r0,sp++
+800004f4:	1b 00       	ld.w	r0,sp++
+
+	//Load start lr, execution will jump here later
+	ld.w lr,r12[TCB.STADDR]
+800004f6:	78 2e       	ld.w	lr,r12[0x8]
+
+	//Set up start SR, enter user mode
+	ld.w r0,r12[TCB.SAVESR]
+800004f8:	78 80       	ld.w	r0,r12[0x20]
+	mtsr 0x0,r0
+800004fa:	e3 b0 00 00 	mtsr	0x0,r0
+
+	//Load start registers
+	ld.w r0,r12[TCB.SAVEREG.R0]
+800004fe:	79 80       	ld.w	r0,r12[0x60]
+	ld.w r1,r12[TCB.SAVEREG.R1]
+80000500:	79 71       	ld.w	r1,r12[0x5c]
+	ld.w r2,r12[TCB.SAVEREG.R2]
+80000502:	79 62       	ld.w	r2,r12[0x58]
+	ld.w r3,r12[TCB.SAVEREG.R3]
+80000504:	79 53       	ld.w	r3,r12[0x54]
+	ld.w r4,r12[TCB.SAVEREG.R4]
+80000506:	79 44       	ld.w	r4,r12[0x50]
+	ld.w r5,r12[TCB.SAVEREG.R5]
+80000508:	79 35       	ld.w	r5,r12[0x4c]
+	ld.w r6,r12[TCB.SAVEREG.R6]
+8000050a:	79 26       	ld.w	r6,r12[0x48]
+	ld.w r7,r12[TCB.SAVEREG.R7]
+8000050c:	79 17       	ld.w	r7,r12[0x44]
+	ld.w r8,r12[TCB.SAVEREG.R8]
+8000050e:	79 08       	ld.w	r8,r12[0x40]
+	ld.w r9,r12[TCB.SAVEREG.R9]
+80000510:	78 f9       	ld.w	r9,r12[0x3c]
+	ld.w r10,r12[TCB.SAVEREG.R10]
+80000512:	78 ea       	ld.w	r10,r12[0x38]
+	ld.w r11,r12[TCB.SAVEREG.R11]
+80000514:	78 db       	ld.w	r11,r12[0x34]
+	ld.w r12,r12[TCB.SAVEREG.R12]
+80000516:	78 cc       	ld.w	r12,r12[0x30]
+
+	mov pc,lr
+80000518:	1c 9f       	mov	pc,lr
+
+8000051a <contextInit>:
+ * from supervisor mode.
+ *
+ ********************************************************/
+contextInit:
+	//Initialize lr in the savereg area
+	ld.w r0,r12[TCB.STADDR]
+8000051a:	78 20       	ld.w	r0,r12[0x8]
+	st.w r12[TCB.SAVEREG.LR],r0
+8000051c:	99 a0       	st.w	r12[0x28],r0
+	//~ call timerStart
+	//~ call interruptEnable
+	//~ popm lr
+
+	//Initialize regs to zero
+	mov r0,0x0
+8000051e:	30 00       	mov	r0,0
+	st.w r12[TCB.SAVEREG.R0],r0
+80000520:	f9 40 00 60 	st.w	r12[96],r0
+	st.w r12[TCB.SAVEREG.R1],r0
+80000524:	f9 40 00 5c 	st.w	r12[92],r0
+	st.w r12[TCB.SAVEREG.R2],r0
+80000528:	f9 40 00 58 	st.w	r12[88],r0
+	st.w r12[TCB.SAVEREG.R3],r0
+8000052c:	f9 40 00 54 	st.w	r12[84],r0
+	st.w r12[TCB.SAVEREG.R4],r0
+80000530:	f9 40 00 50 	st.w	r12[80],r0
+	st.w r12[TCB.SAVEREG.R5],r0
+80000534:	f9 40 00 4c 	st.w	r12[76],r0
+	st.w r12[TCB.SAVEREG.R6],r0
+80000538:	f9 40 00 48 	st.w	r12[72],r0
+	st.w r12[TCB.SAVEREG.R7],r0
+8000053c:	f9 40 00 44 	st.w	r12[68],r0
+	st.w r12[TCB.SAVEREG.R8],r0
+80000540:	f9 40 00 40 	st.w	r12[64],r0
+	st.w r12[TCB.SAVEREG.R9],r0
+80000544:	99 f0       	st.w	r12[0x3c],r0
+	st.w r12[TCB.SAVEREG.R10],r0
+80000546:	99 e0       	st.w	r12[0x38],r0
+	st.w r12[TCB.SAVEREG.R11],r0
+80000548:	99 d0       	st.w	r12[0x34],r0
+	st.w r12[TCB.SAVEREG.R12],r0
+8000054a:	99 c0       	st.w	r12[0x30],r0
+	mov pc,lr
+8000054c:	1c 9f       	mov	pc,lr
+
+8000054e <contextSave>:
+* Task switch routine. This routine save task context.
+* Context of the TCB referenced by EXECTASK will be saved.
+*
+*********************************************************/
+contextSave:
+	pushm r12
+8000054e:	d2 01       	pushm	r12
+	//Fetch the current executing task
+	lda.w r12,EXECTASK
+80000550:	49 cc       	lddpc	r12,800005c0 <_yield+0x12>
+	ld.w r12,r12[0x0]
+80000552:	78 0c       	ld.w	r12,r12[0x0]
+
+	//Save work registers to TCB
+	st.w r12[TCB.SAVER0],r0
+80000554:	99 60       	st.w	r12[0x18],r0
+	st.w r12[TCB.SAVER1],r1
+80000556:	99 71       	st.w	r12[0x1c],r1
+	ld.w r0,sp++					//Use r0 to save r12
+80000558:	1b 00       	ld.w	r0,sp++
+	st.w r12[TCB.SAVEREG.R12],r0
+8000055a:	99 c0       	st.w	r12[0x30],r0
+
+	//Save task SR to TCB
+	ld.w r0,sp[SF_SR]
+8000055c:	7a 00       	ld.w	r0,sp[0x0]
+	st.w r12[TCB.SAVESR],r0
+8000055e:	99 80       	st.w	r12[0x20],r0
+
+	//Save task registers r0-r11 to TCB
+	mov r0,TCB.SAVEREG.R11
+80000560:	33 40       	mov	r0,52
+	add r0,r12
+80000562:	18 00       	add	r0,r12
+	stmts r0,r0-r11
+80000564:	ed c0 0f ff 	stmts	r0,r0-r11
+
+	//Get the address of the USP
+	mov r0,sp
+80000568:	1a 90       	mov	r0,sp
+	st.w --sp,r0
+8000056a:	1a d0       	st.w	--sp,r0
+	stmts sp,sp
+8000056c:	ed cd 20 00 	stmts	sp,sp
+	ld.w r1,sp++					//USP in r1
+80000570:	1b 01       	ld.w	r1,sp++
+
+	//Save RETADDR to TCB
+	ld.w r0,r1[SF_LR_TASK]			//Get lr from user stack, we want to return to task, not to contextSwitch
+80000572:	62 00       	ld.w	r0,r1[0x0]
+	st.w r12[TCB.RETADDR],r0		//correction of stack is done later
+80000574:	99 90       	st.w	r12[0x24],r0
+
+	//Save LR_task
+	st.w r12[TCB.SAVEREG.LR],r0
+80000576:	99 a0       	st.w	r12[0x28],r0
+
+	//Correct the USP for the ROSA_yield() call.
+	//This is done since we do not want to return to ROSA_yield(),
+	//where the stack frame is currently at, but to the executing task.
+	sub r1,-0x04
+80000578:	2f c1       	sub	r1,-4
+
+	//Save USP
+	st.w r12[TCB.SAVEUSP],r1
+8000057a:	99 51       	st.w	r12[0x14],r1
+
+	mov pc,lr
+8000057c:	1c 9f       	mov	pc,lr
+
+8000057e <contextRestore>:
+* Context of the TCB referenced by EXECTASK will be restored.
+*
+*********************************************************/
+contextRestore:
+	//Fetch the current executing task
+	lda.w r12,EXECTASK
+8000057e:	49 1c       	lddpc	r12,800005c0 <_yield+0x12>
+	ld.w r12,r12[0x0]
+80000580:	78 0c       	ld.w	r12,r12[0x0]
+
+	//Restore USP
+	ld.w r1,r12[TCB.SAVEUSP]
+80000582:	78 51       	ld.w	r1,r12[0x14]
+	st.w --sp,r1
+80000584:	1a d1       	st.w	--sp,r1
+	ldmts sp,sp
+80000586:	e5 cd 20 00 	ldmts	sp,sp
+	ld.w r1,sp++
+8000058a:	1b 01       	ld.w	r1,sp++
+
+	//Restore LR = retaddr
+	ld.w lr,r12[TCB.SAVEREG.LR]
+8000058c:	78 ae       	ld.w	lr,r12[0x28]
+
+	//Restore RETADDR
+	ld.w r0,r12[TCB.RETADDR]
+8000058e:	78 90       	ld.w	r0,r12[0x24]
+	st.w sp[SF_PC],r0
+80000590:	9b 10       	st.w	sp[0x4],r0
+
+	//Restore registers
+	mov r0,TCB.SAVEREG.R11
+80000592:	33 40       	mov	r0,52
+	add r0,r12
+80000594:	18 00       	add	r0,r12
+	ldmts r0,r0-r11
+80000596:	e5 c0 0f ff 	ldmts	r0,r0-r11
+
+	//Restore SR
+	ld.w r0,r12[TCB.SAVESR]
+8000059a:	78 80       	ld.w	r0,r12[0x20]
+	st.w sp[SF_SR],r0			//Put SR on the stack for later fetch
+8000059c:	9b 00       	st.w	sp[0x0],r0
+
+	//Restore work registers
+	ld.w r0,r12[TCB.SAVER0]
+8000059e:	78 60       	ld.w	r0,r12[0x18]
+	ld.w r1,r12[TCB.SAVER1]
+800005a0:	78 71       	ld.w	r1,r12[0x1c]
+	ld.w r12,r12[TCB.SAVEREG.R12]
+800005a2:	78 cc       	ld.w	r12,r12[0x30]
+
+	//We are done, exit from supervisor mode
+	rets
+800005a4:	d6 13       	rets
+
+800005a6 <ROSA_yield>:
+* 	transfer control to supervisor mode
+* 	They are used for context switching.
+*
+*********************************************************/
+ROSA_yield:
+	pushm lr
+800005a6:	d4 01       	pushm	lr
+	lda.w lr,_yield
+800005a8:	fe ce ff fa 	sub	lr,pc,-6
+	//Enter supervisor mode
+	scall
+800005ac:	d7 33       	scall
+
+800005ae <_yield>:
+_yield:
+	call contextSave
+800005ae:	cd 0f       	rcall	8000054e <contextSave>
+	call preemptive_scheduler
+800005b0:	f0 1f 00 05 	mcall	800005c4 <_yield+0x16>
+	call contextRestore
+800005b4:	ce 5f       	rcall	8000057e <contextRestore>
+800005b6:	00 00       	add	r0,r0
+800005b8:	80 00       	ld.sh	r0,r0[0x0]
+800005ba:	0d de       	ld.ub	lr,r6[0x5]
+800005bc:	00 00       	add	r0,r0
+800005be:	04 78       	tst	r8,r2
+800005c0:	00 00       	add	r0,r0
+800005c2:	04 80       	andn	r0,r2
+800005c4:	80 00       	ld.sh	r0,r0[0x0]
+800005c6:	05 c8       	ld.ub	r8,r2[0x4]
+
+800005c8 <preemptive_scheduler>:
+ * 	The scheduler function that is called every system clock tick
+ * 	This scheduler chooses the highest priority task in the TCBLIST
+ * 	and places it into the EXECTASK
+ **********************************************************/
+void preemptive_scheduler(void)
+{
+800005c8:	eb cd 40 8f 	pushm	r0-r3,r7,lr
+800005cc:	1a 97       	mov	r7,sp
+800005ce:	20 5d       	sub	sp,20
+	//ledOn(LED2_GPIO);
+
+	//See if any tasks should be woken up
+	tcb * tcbTmp;
+	tcbTmp = WAITING;
+800005d0:	4d 08       	lddpc	r8,80000710 <preemptive_scheduler+0x148>
+800005d2:	70 08       	ld.w	r8,r8[0x0]
+800005d4:	ef 48 ff ec 	st.w	r7[-20],r8
+	
+	if(WAITING != NULL)
+800005d8:	4c e8       	lddpc	r8,80000710 <preemptive_scheduler+0x148>
+800005da:	70 08       	ld.w	r8,r8[0x0]
+800005dc:	58 08       	cp.w	r8,0
+800005de:	c4 40       	breq	80000666 <preemptive_scheduler+0x9e>
+	{
+		while(tcbTmp->nexttcb != NULL && tcbTmp != NULL) {
+800005e0:	c2 08       	rjmp	80000620 <preemptive_scheduler+0x58>
+			
+			if(tcbTmp->wakeuptime == currentTick)
+800005e2:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800005e6:	71 b8       	ld.w	r8,r8[0x6c]
+800005e8:	10 90       	mov	r0,r8
+800005ea:	30 01       	mov	r1,0
+800005ec:	4c a8       	lddpc	r8,80000714 <preemptive_scheduler+0x14c>
+800005ee:	f0 e8 00 00 	ld.d	r8,r8[0]
+800005f2:	10 30       	cp.w	r0,r8
+800005f4:	f2 01 13 00 	cpc	r1,r9
+800005f8:	c0 f1       	brne	80000616 <preemptive_scheduler+0x4e>
+			{
+				
+				removeTaskFromList(&WAITING, tcbTmp);
+800005fa:	ee fb ff ec 	ld.w	r11,r7[-20]
+800005fe:	4c 5c       	lddpc	r12,80000710 <preemptive_scheduler+0x148>
+80000600:	f0 1f 00 46 	mcall	80000718 <preemptive_scheduler+0x150>
+				
+				ROSA_tcbInstallTask(tcbTmp);
+80000604:	ee fc ff ec 	ld.w	r12,r7[-20]
+80000608:	f0 1f 00 45 	mcall	8000071c <preemptive_scheduler+0x154>
+				
+				tcbTmp->wakeuptime = 0;
+8000060c:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000610:	30 09       	mov	r9,0
+80000612:	f1 49 00 6c 	st.w	r8[108],r9
+				
+			}
+			
+			tcbTmp = tcbTmp->nexttcb;
+80000616:	ee f8 ff ec 	ld.w	r8,r7[-20]
+8000061a:	70 08       	ld.w	r8,r8[0x0]
+8000061c:	ef 48 ff ec 	st.w	r7[-20],r8
+	tcb * tcbTmp;
+	tcbTmp = WAITING;
+	
+	if(WAITING != NULL)
+	{
+		while(tcbTmp->nexttcb != NULL && tcbTmp != NULL) {
+80000620:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000624:	70 08       	ld.w	r8,r8[0x0]
+80000626:	58 08       	cp.w	r8,0
+80000628:	c0 50       	breq	80000632 <preemptive_scheduler+0x6a>
+8000062a:	ee f8 ff ec 	ld.w	r8,r7[-20]
+8000062e:	58 08       	cp.w	r8,0
+80000630:	cd 91       	brne	800005e2 <preemptive_scheduler+0x1a>
+			tcbTmp = tcbTmp->nexttcb;
+			
+		}
+		
+		//Check for the final task in WAITING
+		if(tcbTmp->wakeuptime == currentTick)
+80000632:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000636:	71 b8       	ld.w	r8,r8[0x6c]
+80000638:	10 92       	mov	r2,r8
+8000063a:	30 03       	mov	r3,0
+8000063c:	4b 68       	lddpc	r8,80000714 <preemptive_scheduler+0x14c>
+8000063e:	f0 e8 00 00 	ld.d	r8,r8[0]
+80000642:	10 32       	cp.w	r2,r8
+80000644:	f2 03 13 00 	cpc	r3,r9
+80000648:	c0 f1       	brne	80000666 <preemptive_scheduler+0x9e>
+		{
+			
+			removeTaskFromList(&WAITING, tcbTmp);
+8000064a:	ee fb ff ec 	ld.w	r11,r7[-20]
+8000064e:	4b 1c       	lddpc	r12,80000710 <preemptive_scheduler+0x148>
+80000650:	f0 1f 00 32 	mcall	80000718 <preemptive_scheduler+0x150>
+			
+			ROSA_tcbInstallTask(tcbTmp);
+80000654:	ee fc ff ec 	ld.w	r12,r7[-20]
+80000658:	f0 1f 00 31 	mcall	8000071c <preemptive_scheduler+0x154>
+			
+			tcbTmp->wakeuptime = 0;
+8000065c:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000660:	30 09       	mov	r9,0
+80000662:	f1 49 00 6c 	st.w	r8[108],r9
+			
+		}
+	}
+	
+	
+	tcb * currentlyExecutingTask = EXECTASK;
+80000666:	4a f8       	lddpc	r8,80000720 <preemptive_scheduler+0x158>
+80000668:	70 08       	ld.w	r8,r8[0x0]
+8000066a:	ef 48 ff f0 	st.w	r7[-16],r8
+	unsigned int priorityOfCurrentlyExecutingTask;
+	if(EXECTASK != NULL) priorityOfCurrentlyExecutingTask = currentlyExecutingTask->currentpriority;
+8000066e:	4a d8       	lddpc	r8,80000720 <preemptive_scheduler+0x158>
+80000670:	70 08       	ld.w	r8,r8[0x0]
+80000672:	58 08       	cp.w	r8,0
+80000674:	c0 70       	breq	80000682 <preemptive_scheduler+0xba>
+80000676:	ee f8 ff f0 	ld.w	r8,r7[-16]
+8000067a:	71 98       	ld.w	r8,r8[0x64]
+8000067c:	ef 48 ff f4 	st.w	r7[-12],r8
+80000680:	c0 48       	rjmp	80000688 <preemptive_scheduler+0xc0>
+	else priorityOfCurrentlyExecutingTask = 0;
+80000682:	30 08       	mov	r8,0
+80000684:	ef 48 ff f4 	st.w	r7[-12],r8
+	
+	unsigned int highestPriority = priorityOfCurrentlyExecutingTask;
+80000688:	ee f8 ff f4 	ld.w	r8,r7[-12]
+8000068c:	ef 48 ff f8 	st.w	r7[-8],r8
+	tcb * taskToExecute;
+	
+	tcbTmp = TCBLIST;					//Find highest priority task in TCBLIST
+80000690:	4a 58       	lddpc	r8,80000724 <preemptive_scheduler+0x15c>
+80000692:	70 08       	ld.w	r8,r8[0x0]
+80000694:	ef 48 ff ec 	st.w	r7[-20],r8
+	while(tcbTmp->nexttcb != NULL) {
+80000698:	c1 78       	rjmp	800006c6 <preemptive_scheduler+0xfe>
+		
+		if(tcbTmp->currentpriority > highestPriority)
+8000069a:	ee f8 ff ec 	ld.w	r8,r7[-20]
+8000069e:	71 99       	ld.w	r9,r8[0x64]
+800006a0:	ee f8 ff f8 	ld.w	r8,r7[-8]
+800006a4:	10 39       	cp.w	r9,r8
+800006a6:	e0 88 00 0b 	brls	800006bc <preemptive_scheduler+0xf4>
+		{
+			
+			highestPriority = tcbTmp->currentpriority;
+800006aa:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800006ae:	71 98       	ld.w	r8,r8[0x64]
+800006b0:	ef 48 ff f8 	st.w	r7[-8],r8
+			taskToExecute = tcbTmp;
+800006b4:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800006b8:	ef 48 ff fc 	st.w	r7[-4],r8
+			
+		}
+		 
+		tcbTmp = tcbTmp->nexttcb;
+800006bc:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800006c0:	70 08       	ld.w	r8,r8[0x0]
+800006c2:	ef 48 ff ec 	st.w	r7[-20],r8
+	
+	unsigned int highestPriority = priorityOfCurrentlyExecutingTask;
+	tcb * taskToExecute;
+	
+	tcbTmp = TCBLIST;					//Find highest priority task in TCBLIST
+	while(tcbTmp->nexttcb != NULL) {
+800006c6:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800006ca:	70 08       	ld.w	r8,r8[0x0]
+800006cc:	58 08       	cp.w	r8,0
+800006ce:	ce 61       	brne	8000069a <preemptive_scheduler+0xd2>
+		tcbTmp = tcbTmp->nexttcb;
+		
+	}
+	
+	//Check for the final task in TCBLIST
+	if(tcbTmp->currentpriority > highestPriority)
+800006d0:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800006d4:	71 99       	ld.w	r9,r8[0x64]
+800006d6:	ee f8 ff f8 	ld.w	r8,r7[-8]
+800006da:	10 39       	cp.w	r9,r8
+800006dc:	e0 88 00 0b 	brls	800006f2 <preemptive_scheduler+0x12a>
+	{
+		
+		highestPriority = tcbTmp->currentpriority;
+800006e0:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800006e4:	71 98       	ld.w	r8,r8[0x64]
+800006e6:	ef 48 ff f8 	st.w	r7[-8],r8
+		taskToExecute = tcbTmp;
+800006ea:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800006ee:	ef 48 ff fc 	st.w	r7[-4],r8
+	
+	//if(taskToExecute->currentpriority == 2) ledOn(LED2_GPIO);
+	
+	// If there is a higher priority task than the one currently executing
+	// start executing it.
+	if(highestPriority > priorityOfCurrentlyExecutingTask)
+800006f2:	ee f9 ff f8 	ld.w	r9,r7[-8]
+800006f6:	ee f8 ff f4 	ld.w	r8,r7[-12]
+800006fa:	10 39       	cp.w	r9,r8
+800006fc:	e0 88 00 06 	brls	80000708 <preemptive_scheduler+0x140>
+		EXECTASK = taskToExecute;
+80000700:	48 88       	lddpc	r8,80000720 <preemptive_scheduler+0x158>
+80000702:	ee f9 ff fc 	ld.w	r9,r7[-4]
+80000706:	91 09       	st.w	r8[0x0],r9
+80000708:	2f bd       	sub	sp,-20
+8000070a:	e3 cd 80 8f 	ldm	sp++,r0-r3,r7,pc
+8000070e:	00 00       	add	r0,r0
+80000710:	00 00       	add	r0,r0
+80000712:	04 84       	andn	r4,r2
+80000714:	00 00       	add	r0,r0
+80000716:	04 64       	and	r4,r2
+80000718:	80 00       	ld.sh	r0,r0[0x0]
+8000071a:	00 d8       	st.w	--r0,r8
+8000071c:	80 00       	ld.sh	r0,r0[0x0]
+8000071e:	04 bc       	st.h	r2++,r12
+80000720:	00 00       	add	r0,r0
+80000722:	04 80       	andn	r0,r2
+80000724:	00 00       	add	r0,r0
+80000726:	04 78       	tst	r8,r2
+
+80000728 <C.2.9509>:
+80000728:	00 00 00 02 00 00 00 08 00 00 00 20 00 00 00 80     ........... ....
+
+80000738 <timerISR>:
+ * Comment:
+ * 	This is the basic timer interrupt service routine.
+ **********************************************************/
+__attribute__((__interrupt__))
+void timerISR(void)
+{
+80000738:	eb cd 40 80 	pushm	r7,lr
+8000073c:	1a 97       	mov	r7,sp
+8000073e:	20 2d       	sub	sp,8
+	int sr;
+	volatile avr32_tc_t * tc = &AVR32_TC;
+80000740:	fe 78 38 00 	mov	r8,-51200
+80000744:	ef 48 ff fc 	st.w	r7[-4],r8
+
+	//Read the timer status register to determine if this is a valid interrupt
+	sr = tc->channel[0].sr;
+80000748:	ee f8 ff fc 	ld.w	r8,r7[-4]
+8000074c:	70 88       	ld.w	r8,r8[0x20]
+8000074e:	ef 48 ff f8 	st.w	r7[-8],r8
+	if(sr & AVR32_TC_CPCS_MASK){
+80000752:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000756:	e2 18 00 10 	andl	r8,0x10,COH
+8000075a:	c0 f0       	breq	80000778 <timerISR+0x40>
+		
+		// With every timer interrupt the current tick is incremented
+		currentTick ++;
+8000075c:	48 98       	lddpc	r8,80000780 <timerISR+0x48>
+8000075e:	f0 ea 00 00 	ld.d	r10,r8[0]
+80000762:	30 18       	mov	r8,1
+80000764:	30 09       	mov	r9,0
+80000766:	f4 08 00 08 	add	r8,r10,r8
+8000076a:	f6 09 00 49 	adc	r9,r11,r9
+8000076e:	48 5a       	lddpc	r10,80000780 <timerISR+0x48>
+80000770:	f4 e9 00 00 	st.d	r10[0],r8
+		
+		// Call the scheduler
+		//preemptive_scheduler();
+		ROSA_yieldFromISRNew();
+80000774:	f0 1f 00 04 	mcall	80000784 <timerISR+0x4c>
+			
+	}
+			
+}
+80000778:	2f ed       	sub	sp,-8
+8000077a:	e3 cd 40 80 	ldm	sp++,r7,lr
+8000077e:	d6 03       	rete
+80000780:	00 00       	add	r0,r0
+80000782:	04 64       	and	r4,r2
+80000784:	80 00       	ld.sh	r0,r0[0x0]
+80000786:	03 24       	ld.uh	r4,r1++
+
+80000788 <timerPeriodSet>:
+ * Comment:
+ * 	Set the timer period to 'ms' milliseconds.
+ *
+ **********************************************************/
+int timerPeriodSet(unsigned int ms)
+{
+80000788:	eb cd 40 80 	pushm	r7,lr
+8000078c:	1a 97       	mov	r7,sp
+8000078e:	20 7d       	sub	sp,28
+80000790:	ef 4c ff e4 	st.w	r7[-28],r12
+
+	int rc, prescale;
+	int f[] = { 2, 8, 32, 128 };
+80000794:	4a 48       	lddpc	r8,80000824 <timerPeriodSet+0x9c>
+80000796:	ee ca 00 18 	sub	r10,r7,24
+8000079a:	10 9b       	mov	r11,r8
+8000079c:	f6 e8 00 00 	ld.d	r8,r11[0]
+800007a0:	f4 e9 00 00 	st.d	r10[0],r8
+800007a4:	f6 e8 00 08 	ld.d	r8,r11[8]
+800007a8:	f4 e9 00 08 	st.d	r10[8],r8
+	//FOSC0 / factor_prescale * time[s];
+	prescale = AVR32_TC_CMR0_TCCLKS_TIMER_CLOCK5;
+800007ac:	30 48       	mov	r8,4
+800007ae:	ef 48 ff fc 	st.w	r7[-4],r8
+	rc = FOSC0 / f[prescale - 1] * ms / 1000;
+800007b2:	ee f8 ff fc 	ld.w	r8,r7[-4]
+800007b6:	20 18       	sub	r8,1
+800007b8:	a3 68       	lsl	r8,0x2
+800007ba:	ee 08 00 08 	add	r8,r7,r8
+800007be:	f0 f9 ff e8 	ld.w	r9,r8[-24]
+800007c2:	e0 68 1b 00 	mov	r8,6912
+800007c6:	ea 18 00 b7 	orh	r8,0xb7
+800007ca:	f0 09 0c 08 	divs	r8,r8,r9
+800007ce:	10 99       	mov	r9,r8
+800007d0:	ee f8 ff e4 	ld.w	r8,r7[-28]
+800007d4:	b1 39       	mul	r9,r8
+800007d6:	e0 68 4d d3 	mov	r8,19923
+800007da:	ea 18 10 62 	orh	r8,0x1062
+800007de:	f2 08 06 48 	mulu.d	r8,r9,r8
+800007e2:	f2 08 16 06 	lsr	r8,r9,0x6
+800007e6:	ef 48 ff f8 	st.w	r7[-8],r8
+	timerPrescaleSet(prescale);
+800007ea:	ee fc ff fc 	ld.w	r12,r7[-4]
+800007ee:	f0 1f 00 0f 	mcall	80000828 <timerPeriodSet+0xa0>
+	timerRCSet(rc);
+800007f2:	ee fc ff f8 	ld.w	r12,r7[-8]
+800007f6:	f0 1f 00 0e 	mcall	8000082c <timerPeriodSet+0xa4>
+	return rc * prescale / FOSC0;
+800007fa:	ee f9 ff f8 	ld.w	r9,r7[-8]
+800007fe:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000802:	f2 08 02 4a 	mul	r10,r9,r8
+80000806:	e0 68 9f 81 	mov	r8,40833
+8000080a:	ea 18 16 5e 	orh	r8,0x165e
+8000080e:	f4 08 04 48 	muls.d	r8,r10,r8
+80000812:	b5 49       	asr	r9,0x14
+80000814:	f4 08 14 1f 	asr	r8,r10,0x1f
+80000818:	f2 08 01 08 	sub	r8,r9,r8
+}
+8000081c:	10 9c       	mov	r12,r8
+8000081e:	2f 9d       	sub	sp,-28
+80000820:	e3 cd 80 80 	ldm	sp++,r7,pc
+80000824:	80 00       	ld.sh	r0,r0[0x0]
+80000826:	07 28       	ld.uh	r8,r3++
+80000828:	80 00       	ld.sh	r0,r0[0x0]
+8000082a:	0e 24       	rsub	r4,r7
+8000082c:	80 00       	ld.sh	r0,r0[0x0]
+8000082e:	0e 0e       	add	lr,r7
+
+80000830 <buttonInit>:
+80000830:	eb cd 40 80 	pushm	r7,lr
+80000834:	1a 97       	mov	r7,sp
+80000836:	30 1b       	mov	r11,1
+80000838:	35 8c       	mov	r12,88
+8000083a:	f0 1f 00 07 	mcall	80000854 <buttonInit+0x24>
+8000083e:	30 1b       	mov	r11,1
+80000840:	35 5c       	mov	r12,85
+80000842:	f0 1f 00 05 	mcall	80000854 <buttonInit+0x24>
+80000846:	30 1b       	mov	r11,1
+80000848:	35 2c       	mov	r12,82
+8000084a:	f0 1f 00 03 	mcall	80000854 <buttonInit+0x24>
+8000084e:	e3 cd 80 80 	ldm	sp++,r7,pc
+80000852:	00 00       	add	r0,r0
+80000854:	80 00       	ld.sh	r0,r0[0x0]
+80000856:	08 c4       	st.b	r4++,r4
+
+80000858 <joystickInit>:
+80000858:	eb cd 40 80 	pushm	r7,lr
+8000085c:	1a 97       	mov	r7,sp
+8000085e:	30 1b       	mov	r11,1
+80000860:	31 bc       	mov	r12,27
+80000862:	f0 1f 00 0b 	mcall	8000088c <joystickInit+0x34>
+80000866:	30 1b       	mov	r11,1
+80000868:	31 9c       	mov	r12,25
+8000086a:	f0 1f 00 09 	mcall	8000088c <joystickInit+0x34>
+8000086e:	30 1b       	mov	r11,1
+80000870:	31 cc       	mov	r12,28
+80000872:	f0 1f 00 07 	mcall	8000088c <joystickInit+0x34>
+80000876:	30 1b       	mov	r11,1
+80000878:	31 4c       	mov	r12,20
+8000087a:	f0 1f 00 05 	mcall	8000088c <joystickInit+0x34>
+8000087e:	30 1b       	mov	r11,1
+80000880:	31 ac       	mov	r12,26
+80000882:	f0 1f 00 03 	mcall	8000088c <joystickInit+0x34>
+80000886:	e3 cd 80 80 	ldm	sp++,r7,pc
+8000088a:	00 00       	add	r0,r0
+8000088c:	80 00       	ld.sh	r0,r0[0x0]
+8000088e:	08 c4       	st.b	r4++,r4
+
+80000890 <delay_ms>:
+80000890:	eb cd 40 80 	pushm	r7,lr
+80000894:	1a 97       	mov	r7,sp
+80000896:	20 2d       	sub	sp,8
+80000898:	ef 4c ff f8 	st.w	r7[-8],r12
+8000089c:	ee f8 ff f8 	ld.w	r8,r7[-8]
+800008a0:	e0 69 04 42 	mov	r9,1090
+800008a4:	b3 38       	mul	r8,r9
+800008a6:	ef 48 ff fc 	st.w	r7[-4],r8
+800008aa:	c0 68       	rjmp	800008b6 <delay_ms+0x26>
+800008ac:	ee f8 ff fc 	ld.w	r8,r7[-4]
+800008b0:	20 18       	sub	r8,1
+800008b2:	ef 48 ff fc 	st.w	r7[-4],r8
+800008b6:	ee f8 ff fc 	ld.w	r8,r7[-4]
+800008ba:	58 08       	cp.w	r8,0
+800008bc:	cf 81       	brne	800008ac <delay_ms+0x1c>
+800008be:	2f ed       	sub	sp,-8
+800008c0:	e3 cd 80 80 	ldm	sp++,r7,pc
+
+800008c4 <gpioInit>:
+800008c4:	eb cd 40 80 	pushm	r7,lr
+800008c8:	1a 97       	mov	r7,sp
+800008ca:	20 7d       	sub	sp,28
+800008cc:	ef 4c ff ec 	st.w	r7[-20],r12
+800008d0:	ef 4b ff e8 	st.w	r7[-24],r11
+800008d4:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800008d8:	a5 58       	asr	r8,0x5
+800008da:	ef 48 ff f4 	st.w	r7[-12],r8
+800008de:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800008e2:	f1 d8 c0 05 	bfextu	r8,r8,0x0,0x5
+800008e6:	ef 48 ff fc 	st.w	r7[-4],r8
+800008ea:	30 19       	mov	r9,1
+800008ec:	ee f8 ff fc 	ld.w	r8,r7[-4]
+800008f0:	f2 08 09 48 	lsl	r8,r9,r8
+800008f4:	ef 48 ff f8 	st.w	r7[-8],r8
+800008f8:	ee f8 ff f4 	ld.w	r8,r7[-12]
+800008fc:	a9 68       	lsl	r8,0x8
+800008fe:	e0 28 f0 00 	sub	r8,61440
+80000902:	ef 48 ff f0 	st.w	r7[-16],r8
+80000906:	ee f9 ff f8 	ld.w	r9,r7[-8]
+8000090a:	ee f8 ff f0 	ld.w	r8,r7[-16]
+8000090e:	91 19       	st.w	r8[0x4],r9
+80000910:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000914:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000918:	91 69       	st.w	r8[0x18],r9
+8000091a:	ee f9 ff f8 	ld.w	r9,r7[-8]
+8000091e:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000922:	91 a9       	st.w	r8[0x28],r9
+80000924:	ee f8 ff e8 	ld.w	r8,r7[-24]
+80000928:	ef 48 ff e4 	st.w	r7[-28],r8
+8000092c:	ee f8 ff e4 	ld.w	r8,r7[-28]
+80000930:	58 08       	cp.w	r8,0
+80000932:	c0 60       	breq	8000093e <gpioInit+0x7a>
+80000934:	ee f8 ff e4 	ld.w	r8,r7[-28]
+80000938:	58 18       	cp.w	r8,1
+8000093a:	c0 90       	breq	8000094c <gpioInit+0x88>
+8000093c:	c0 f8       	rjmp	8000095a <gpioInit+0x96>
+8000093e:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000942:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000946:	f1 49 00 44 	st.w	r8[68],r9
+8000094a:	c0 e8       	rjmp	80000966 <gpioInit+0xa2>
+8000094c:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000950:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000954:	f1 49 00 48 	st.w	r8[72],r9
+80000958:	c0 78       	rjmp	80000966 <gpioInit+0xa2>
+8000095a:	ee f9 ff f8 	ld.w	r9,r7[-8]
+8000095e:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000962:	f1 49 00 48 	st.w	r8[72],r9
+80000966:	2f 9d       	sub	sp,-28
+80000968:	e3 cd 80 80 	ldm	sp++,r7,pc
+
+8000096c <gpioClear>:
+8000096c:	eb cd 40 80 	pushm	r7,lr
+80000970:	1a 97       	mov	r7,sp
+80000972:	20 5d       	sub	sp,20
+80000974:	ef 4c ff ec 	st.w	r7[-20],r12
+80000978:	ee f8 ff ec 	ld.w	r8,r7[-20]
+8000097c:	a5 58       	asr	r8,0x5
+8000097e:	ef 48 ff f4 	st.w	r7[-12],r8
+80000982:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000986:	f1 d8 c0 05 	bfextu	r8,r8,0x0,0x5
+8000098a:	ef 48 ff fc 	st.w	r7[-4],r8
+8000098e:	30 19       	mov	r9,1
+80000990:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000994:	f2 08 09 48 	lsl	r8,r9,r8
+80000998:	ef 48 ff f8 	st.w	r7[-8],r8
+8000099c:	ee f8 ff f4 	ld.w	r8,r7[-12]
+800009a0:	a9 68       	lsl	r8,0x8
+800009a2:	e0 28 f0 00 	sub	r8,61440
+800009a6:	ef 48 ff f0 	st.w	r7[-16],r8
+800009aa:	ee f9 ff f8 	ld.w	r9,r7[-8]
+800009ae:	ee f8 ff f0 	ld.w	r8,r7[-16]
+800009b2:	f1 49 00 58 	st.w	r8[88],r9
+800009b6:	2f bd       	sub	sp,-20
+800009b8:	e3 cd 80 80 	ldm	sp++,r7,pc
+
+800009bc <gpioSet>:
+800009bc:	eb cd 40 80 	pushm	r7,lr
+800009c0:	1a 97       	mov	r7,sp
+800009c2:	20 5d       	sub	sp,20
+800009c4:	ef 4c ff ec 	st.w	r7[-20],r12
+800009c8:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800009cc:	a5 58       	asr	r8,0x5
+800009ce:	ef 48 ff f4 	st.w	r7[-12],r8
+800009d2:	ee f8 ff ec 	ld.w	r8,r7[-20]
+800009d6:	f1 d8 c0 05 	bfextu	r8,r8,0x0,0x5
+800009da:	ef 48 ff fc 	st.w	r7[-4],r8
+800009de:	30 19       	mov	r9,1
+800009e0:	ee f8 ff fc 	ld.w	r8,r7[-4]
+800009e4:	f2 08 09 48 	lsl	r8,r9,r8
+800009e8:	ef 48 ff f8 	st.w	r7[-8],r8
+800009ec:	ee f8 ff f4 	ld.w	r8,r7[-12]
+800009f0:	a9 68       	lsl	r8,0x8
+800009f2:	e0 28 f0 00 	sub	r8,61440
+800009f6:	ef 48 ff f0 	st.w	r7[-16],r8
+800009fa:	ee f9 ff f8 	ld.w	r9,r7[-8]
+800009fe:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000a02:	f1 49 00 54 	st.w	r8[84],r9
+80000a06:	2f bd       	sub	sp,-20
+80000a08:	e3 cd 80 80 	ldm	sp++,r7,pc
+
+80000a0c <ledInit>:
+80000a0c:	eb cd 40 80 	pushm	r7,lr
+80000a10:	1a 97       	mov	r7,sp
+80000a12:	20 9d       	sub	sp,36
+80000a14:	49 e8       	lddpc	r8,80000a8c <ledInit+0x80>
+80000a16:	ee cb 00 24 	sub	r11,r7,36
+80000a1a:	10 9a       	mov	r10,r8
+80000a1c:	f4 e8 00 00 	ld.d	r8,r10[0]
+80000a20:	f6 e9 00 00 	st.d	r11[0],r8
+80000a24:	f4 e8 00 08 	ld.d	r8,r10[8]
+80000a28:	f6 e9 00 08 	st.d	r11[8],r8
+80000a2c:	f4 e8 00 10 	ld.d	r8,r10[16]
+80000a30:	f6 e9 00 10 	st.d	r11[16],r8
+80000a34:	f4 e8 00 18 	ld.d	r8,r10[24]
+80000a38:	f6 e9 00 18 	st.d	r11[24],r8
+80000a3c:	30 08       	mov	r8,0
+80000a3e:	ef 48 ff fc 	st.w	r7[-4],r8
+80000a42:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000a46:	a3 68       	lsl	r8,0x2
+80000a48:	ee 08 00 08 	add	r8,r7,r8
+80000a4c:	f0 f8 ff dc 	ld.w	r8,r8[-36]
+80000a50:	10 9c       	mov	r12,r8
+80000a52:	f0 1f 00 10 	mcall	80000a90 <ledInit+0x84>
+80000a56:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000a5a:	a3 68       	lsl	r8,0x2
+80000a5c:	ee 08 00 08 	add	r8,r7,r8
+80000a60:	f0 f8 ff dc 	ld.w	r8,r8[-36]
+80000a64:	30 0b       	mov	r11,0
+80000a66:	10 9c       	mov	r12,r8
+80000a68:	f0 1f 00 0b 	mcall	80000a94 <ledInit+0x88>
+80000a6c:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000a70:	58 78       	cp.w	r8,7
+80000a72:	5f 18       	srne	r8
+80000a74:	f3 d8 c0 08 	bfextu	r9,r8,0x0,0x8
+80000a78:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000a7c:	2f f8       	sub	r8,-1
+80000a7e:	ef 48 ff fc 	st.w	r7[-4],r8
+80000a82:	58 09       	cp.w	r9,0
+80000a84:	cd f1       	brne	80000a42 <ledInit+0x36>
+80000a86:	2f 7d       	sub	sp,-36
+80000a88:	e3 cd 80 80 	ldm	sp++,r7,pc
+80000a8c:	80 00       	ld.sh	r0,r0[0x0]
+80000a8e:	14 00       	add	r0,r10
+80000a90:	80 00       	ld.sh	r0,r0[0x0]
+80000a92:	0a b8       	st.h	r5++,r8
+80000a94:	80 00       	ld.sh	r0,r0[0x0]
+80000a96:	08 c4       	st.b	r4++,r4
+
+80000a98 <ledOn>:
+80000a98:	eb cd 40 80 	pushm	r7,lr
+80000a9c:	1a 97       	mov	r7,sp
+80000a9e:	20 1d       	sub	sp,4
+80000aa0:	ef 4c ff fc 	st.w	r7[-4],r12
+80000aa4:	ee fc ff fc 	ld.w	r12,r7[-4]
+80000aa8:	f0 1f 00 03 	mcall	80000ab4 <ledOn+0x1c>
+80000aac:	2f fd       	sub	sp,-4
+80000aae:	e3 cd 80 80 	ldm	sp++,r7,pc
+80000ab2:	00 00       	add	r0,r0
+80000ab4:	80 00       	ld.sh	r0,r0[0x0]
+80000ab6:	09 6c       	ld.uh	r12,--r4
+
+80000ab8 <ledOff>:
+80000ab8:	eb cd 40 80 	pushm	r7,lr
+80000abc:	1a 97       	mov	r7,sp
+80000abe:	20 1d       	sub	sp,4
+80000ac0:	ef 4c ff fc 	st.w	r7[-4],r12
+80000ac4:	ee fc ff fc 	ld.w	r12,r7[-4]
+80000ac8:	f0 1f 00 03 	mcall	80000ad4 <ledOff+0x1c>
+80000acc:	2f fd       	sub	sp,-4
+80000ace:	e3 cd 80 80 	ldm	sp++,r7,pc
+80000ad2:	00 00       	add	r0,r0
+80000ad4:	80 00       	ld.sh	r0,r0[0x0]
+80000ad6:	09 bc       	ld.ub	r12,r4[0x3]
+
+80000ad8 <potInit>:
+80000ad8:	d3 01       	pushm	r11-r12
+80000ada:	e0 6c 10 00 	mov	r12,4096
+80000ade:	ea 1c ff ff 	orh	r12,0xffff
+80000ae2:	31 6b       	mov	r11,22
+80000ae4:	99 2b       	st.w	r12[0x8],r11
+80000ae6:	99 6b       	st.w	r12[0x18],r11
+80000ae8:	99 6b       	st.w	r12[0x18],r11
+80000aea:	e0 6c 3c 00 	mov	r12,15360
+80000aee:	ea 1c ff ff 	orh	r12,0xffff
+80000af2:	30 1b       	mov	r11,1
+80000af4:	99 0b       	st.w	r12[0x0],r11
+80000af6:	e0 6b 0f 1f 	mov	r11,3871
+80000afa:	b1 6b       	lsl	r11,0x10
+80000afc:	99 1b       	st.w	r12[0x4],r11
+80000afe:	30 2b       	mov	r11,2
+80000b00:	99 4b       	st.w	r12[0x10],r11
+80000b02:	d3 02       	popm	r11-r12
+80000b04:	1c 9f       	mov	pc,lr
+
+80000b06 <potGetValue>:
+80000b06:	d1 81       	pushm	r10-r11
+80000b08:	e0 6c 3c 00 	mov	r12,15360
+80000b0c:	ea 1c ff ff 	orh	r12,0xffff
+80000b10:	30 2b       	mov	r11,2
+80000b12:	99 0b       	st.w	r12[0x0],r11
+
+80000b14 <a1>:
+80000b14:	78 7a       	ld.w	r10,r12[0x1c]
+80000b16:	16 7a       	tst	r10,r11
+80000b18:	cf e0       	breq	80000b14 <a1>
+80000b1a:	78 dc       	ld.w	r12,r12[0x34]
+80000b1c:	d1 82       	popm	r10-r11
+80000b1e:	1c 9f       	mov	pc,lr
+
+80000b20 <usartReset>:
+80000b20:	eb cd 40 80 	pushm	r7,lr
+80000b24:	1a 97       	mov	r7,sp
+80000b26:	20 3d       	sub	sp,12
+80000b28:	ef 4c ff f8 	st.w	r7[-8],r12
+80000b2c:	f0 1f 00 16 	mcall	80000b84 <usartReset+0x64>
+80000b30:	18 98       	mov	r8,r12
+80000b32:	ef 48 ff fc 	st.w	r7[-4],r8
+80000b36:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000b3a:	58 08       	cp.w	r8,0
+80000b3c:	c0 30       	breq	80000b42 <usartReset+0x22>
+80000b3e:	f0 1f 00 13 	mcall	80000b88 <usartReset+0x68>
+80000b42:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000b46:	3f f8       	mov	r8,-1
+80000b48:	93 38       	st.w	r9[0xc],r8
+80000b4a:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000b4e:	70 58       	ld.w	r8,r8[0x14]
+80000b50:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000b54:	58 08       	cp.w	r8,0
+80000b56:	c0 30       	breq	80000b5c <usartReset+0x3c>
+80000b58:	f0 1f 00 0d 	mcall	80000b8c <usartReset+0x6c>
+80000b5c:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000b60:	30 08       	mov	r8,0
+80000b62:	93 18       	st.w	r9[0x4],r8
+80000b64:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000b68:	30 08       	mov	r8,0
+80000b6a:	93 98       	st.w	r9[0x24],r8
+80000b6c:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000b70:	30 08       	mov	r8,0
+80000b72:	93 a8       	st.w	r9[0x28],r8
+80000b74:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000b78:	ea 68 61 0c 	mov	r8,680204
+80000b7c:	93 08       	st.w	r9[0x0],r8
+80000b7e:	2f dd       	sub	sp,-12
+80000b80:	e3 cd 80 80 	ldm	sp++,r7,pc
+80000b84:	80 00       	ld.sh	r0,r0[0x0]
+80000b86:	11 6e       	ld.uh	lr,--r8
+80000b88:	80 00       	ld.sh	r0,r0[0x0]
+80000b8a:	11 66       	ld.uh	r6,--r8
+80000b8c:	80 00       	ld.sh	r0,r0[0x0]
+80000b8e:	11 6a       	ld.uh	r10,--r8
+
+80000b90 <usartSetBaudrate>:
+80000b90:	eb cd 40 80 	pushm	r7,lr
+80000b94:	1a 97       	mov	r7,sp
+80000b96:	20 bd       	sub	sp,44
+80000b98:	ef 4c ff ec 	st.w	r7[-20],r12
+80000b9c:	ef 4b ff e8 	st.w	r7[-24],r11
+80000ba0:	ef 4a ff e4 	st.w	r7[-28],r10
+80000ba4:	ee f8 ff e8 	ld.w	r8,r7[-24]
+80000ba8:	f0 09 15 04 	lsl	r9,r8,0x4
+80000bac:	ee f8 ff e4 	ld.w	r8,r7[-28]
+80000bb0:	10 39       	cp.w	r9,r8
+80000bb2:	e0 8b 00 06 	brhi	80000bbe <usartSetBaudrate+0x2e>
+80000bb6:	31 09       	mov	r9,16
+80000bb8:	ef 49 ff d4 	st.w	r7[-44],r9
+80000bbc:	c0 48       	rjmp	80000bc4 <usartSetBaudrate+0x34>
+80000bbe:	30 88       	mov	r8,8
+80000bc0:	ef 48 ff d4 	st.w	r7[-44],r8
+80000bc4:	ee f9 ff d4 	ld.w	r9,r7[-44]
+80000bc8:	ef 49 ff f0 	st.w	r7[-16],r9
+80000bcc:	ee f8 ff e4 	ld.w	r8,r7[-28]
+80000bd0:	f0 0a 15 03 	lsl	r10,r8,0x3
+80000bd4:	ee f9 ff f0 	ld.w	r9,r7[-16]
+80000bd8:	ee f8 ff e8 	ld.w	r8,r7[-24]
+80000bdc:	f2 08 02 48 	mul	r8,r9,r8
+80000be0:	a1 98       	lsr	r8,0x1
+80000be2:	10 0a       	add	r10,r8
+80000be4:	ee f9 ff f0 	ld.w	r9,r7[-16]
+80000be8:	ee f8 ff e8 	ld.w	r8,r7[-24]
+80000bec:	f2 08 02 48 	mul	r8,r9,r8
+80000bf0:	f4 08 0d 08 	divu	r8,r10,r8
+80000bf4:	ef 48 ff f4 	st.w	r7[-12],r8
+80000bf8:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000bfc:	a3 98       	lsr	r8,0x3
+80000bfe:	ef 48 ff f8 	st.w	r7[-8],r8
+80000c02:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000c06:	f1 d8 c0 03 	bfextu	r8,r8,0x0,0x3
+80000c0a:	ef 48 ff fc 	st.w	r7[-4],r8
+80000c0e:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000c12:	58 08       	cp.w	r8,0
+80000c14:	c0 70       	breq	80000c22 <usartSetBaudrate+0x92>
+80000c16:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000c1a:	e0 48 ff ff 	cp.w	r8,65535
+80000c1e:	e0 88 00 06 	brls	80000c2a <usartSetBaudrate+0x9a>
+80000c22:	30 18       	mov	r8,1
+80000c24:	ef 48 ff d8 	st.w	r7[-40],r8
+80000c28:	c2 c8       	rjmp	80000c80 <usartSetBaudrate+0xf0>
+80000c2a:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000c2e:	70 18       	ld.w	r8,r8[0x4]
+80000c30:	10 99       	mov	r9,r8
+80000c32:	e4 19 ff f7 	andh	r9,0xfff7
+80000c36:	e0 19 fe cf 	andl	r9,0xfecf
+80000c3a:	ef 49 ff dc 	st.w	r7[-36],r9
+80000c3e:	ee f8 ff f0 	ld.w	r8,r7[-16]
+80000c42:	59 08       	cp.w	r8,16
+80000c44:	c0 60       	breq	80000c50 <usartSetBaudrate+0xc0>
+80000c46:	e8 68 00 00 	mov	r8,524288
+80000c4a:	ef 48 ff e0 	st.w	r7[-32],r8
+80000c4e:	c0 48       	rjmp	80000c56 <usartSetBaudrate+0xc6>
+80000c50:	30 09       	mov	r9,0
+80000c52:	ef 49 ff e0 	st.w	r7[-32],r9
+80000c56:	ee f9 ff dc 	ld.w	r9,r7[-36]
+80000c5a:	ee f8 ff e0 	ld.w	r8,r7[-32]
+80000c5e:	10 49       	or	r9,r8
+80000c60:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000c64:	91 19       	st.w	r8[0x4],r9
+80000c66:	ee f8 ff fc 	ld.w	r8,r7[-4]
+80000c6a:	f0 09 15 10 	lsl	r9,r8,0x10
+80000c6e:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000c72:	10 49       	or	r9,r8
+80000c74:	ee f8 ff ec 	ld.w	r8,r7[-20]
+80000c78:	91 89       	st.w	r8[0x20],r9
+80000c7a:	30 09       	mov	r9,0
+80000c7c:	ef 49 ff d8 	st.w	r7[-40],r9
+80000c80:	ee f8 ff d8 	ld.w	r8,r7[-40]
+80000c84:	10 9c       	mov	r12,r8
+80000c86:	2f 5d       	sub	sp,-44
+80000c88:	e3 cd 80 80 	ldm	sp++,r7,pc
+
+80000c8c <usartInit>:
+80000c8c:	eb cd 40 80 	pushm	r7,lr
+80000c90:	1a 97       	mov	r7,sp
+80000c92:	20 4d       	sub	sp,16
+80000c94:	ef 4c ff f8 	st.w	r7[-8],r12
+80000c98:	ef 4b ff f4 	st.w	r7[-12],r11
+80000c9c:	ef 4a ff f0 	st.w	r7[-16],r10
+80000ca0:	fe 78 10 00 	mov	r8,-61440
+80000ca4:	ef 48 ff fc 	st.w	r7[-4],r8
+80000ca8:	ee f9 ff fc 	ld.w	r9,r7[-4]
+80000cac:	30 18       	mov	r8,1
+80000cae:	93 28       	st.w	r9[0x8],r8
+80000cb0:	ee f9 ff fc 	ld.w	r9,r7[-4]
+80000cb4:	30 28       	mov	r8,2
+80000cb6:	93 28       	st.w	r9[0x8],r8
+80000cb8:	ee fc ff f8 	ld.w	r12,r7[-8]
+80000cbc:	f0 1f 00 3b 	mcall	80000da8 <usartInit+0x11c>
+80000cc0:	ee f9 ff f0 	ld.w	r9,r7[-16]
+80000cc4:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000cc8:	70 08       	ld.w	r8,r8[0x0]
+80000cca:	12 9a       	mov	r10,r9
+80000ccc:	10 9b       	mov	r11,r8
+80000cce:	ee fc ff f8 	ld.w	r12,r7[-8]
+80000cd2:	f0 1f 00 37 	mcall	80000dac <usartInit+0x120>
+80000cd6:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000cda:	11 c9       	ld.ub	r9,r8[0x4]
+80000cdc:	30 98       	mov	r8,9
+80000cde:	f0 09 18 00 	cp.b	r9,r8
+80000ce2:	c0 a1       	brne	80000cf6 <usartInit+0x6a>
+80000ce4:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000ce8:	70 18       	ld.w	r8,r8[0x4]
+80000cea:	10 99       	mov	r9,r8
+80000cec:	b1 b9       	sbr	r9,0x11
+80000cee:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000cf2:	91 19       	st.w	r8[0x4],r9
+80000cf4:	c0 d8       	rjmp	80000d0e <usartInit+0x82>
+80000cf6:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000cfa:	70 19       	ld.w	r9,r8[0x4]
+80000cfc:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000d00:	11 c8       	ld.ub	r8,r8[0x4]
+80000d02:	20 58       	sub	r8,5
+80000d04:	a7 68       	lsl	r8,0x6
+80000d06:	10 49       	or	r9,r8
+80000d08:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d0c:	91 19       	st.w	r8[0x4],r9
+80000d0e:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d12:	70 1a       	ld.w	r10,r8[0x4]
+80000d14:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000d18:	11 d8       	ld.ub	r8,r8[0x5]
+80000d1a:	f0 09 15 09 	lsl	r9,r8,0x9
+80000d1e:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000d22:	f1 38 00 08 	ld.ub	r8,r8[8]
+80000d26:	af 68       	lsl	r8,0xe
+80000d28:	f3 e8 10 08 	or	r8,r9,r8
+80000d2c:	f5 e8 10 09 	or	r9,r10,r8
+80000d30:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d34:	91 19       	st.w	r8[0x4],r9
+80000d36:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000d3a:	90 39       	ld.sh	r9,r8[0x6]
+80000d3c:	30 28       	mov	r8,2
+80000d3e:	f0 09 19 00 	cp.h	r9,r8
+80000d42:	e0 88 00 14 	brls	80000d6a <usartInit+0xde>
+80000d46:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d4a:	70 18       	ld.w	r8,r8[0x4]
+80000d4c:	10 99       	mov	r9,r8
+80000d4e:	ad b9       	sbr	r9,0xd
+80000d50:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d54:	91 19       	st.w	r8[0x4],r9
+80000d56:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000d5a:	90 38       	ld.sh	r8,r8[0x6]
+80000d5c:	5c 78       	castu.h	r8
+80000d5e:	20 28       	sub	r8,2
+80000d60:	10 99       	mov	r9,r8
+80000d62:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d66:	91 a9       	st.w	r8[0x28],r9
+80000d68:	c0 d8       	rjmp	80000d82 <usartInit+0xf6>
+80000d6a:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d6e:	70 19       	ld.w	r9,r8[0x4]
+80000d70:	ee f8 ff f4 	ld.w	r8,r7[-12]
+80000d74:	90 38       	ld.sh	r8,r8[0x6]
+80000d76:	5c 78       	castu.h	r8
+80000d78:	ad 68       	lsl	r8,0xc
+80000d7a:	10 49       	or	r9,r8
+80000d7c:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d80:	91 19       	st.w	r8[0x4],r9
+80000d82:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d86:	70 18       	ld.w	r8,r8[0x4]
+80000d88:	10 99       	mov	r9,r8
+80000d8a:	e0 19 ff f0 	andl	r9,0xfff0
+80000d8e:	ee f8 ff f8 	ld.w	r8,r7[-8]
+80000d92:	91 19       	st.w	r8[0x4],r9
+80000d94:	ee f9 ff f8 	ld.w	r9,r7[-8]
+80000d98:	35 08       	mov	r8,80
+80000d9a:	93 08       	st.w	r9[0x0],r8
+80000d9c:	30 08       	mov	r8,0
+80000d9e:	10 9c       	mov	r12,r8
+80000da0:	2f cd       	sub	sp,-16
+80000da2:	e3 cd 80 80 	ldm	sp++,r7,pc
+80000da6:	00 00       	add	r0,r0
+80000da8:	80 00       	ld.sh	r0,r0[0x0]
+80000daa:	0b 20       	ld.uh	r0,r5++
+80000dac:	80 00       	ld.sh	r0,r0[0x0]
+80000dae:	0b 90       	ld.ub	r0,r5[0x1]
+
+80000db0 <timerInit>:
+80000db0:	d5 01       	pushm	r11,lr
+80000db2:	d2 01       	pushm	r12
+80000db4:	f0 1f 00 28 	mcall	80000e54 <timerClearInterrupt+0x10>
+80000db8:	f0 1f 00 28 	mcall	80000e58 <timerClearInterrupt+0x14>
+80000dbc:	e0 6c 38 00 	mov	r12,14336
+80000dc0:	ea 1c ff ff 	orh	r12,0xffff
+80000dc4:	e0 6b c0 00 	mov	r11,49152
+80000dc8:	ea 1b 00 00 	orh	r11,0x0
+80000dcc:	99 1b       	st.w	r12[0x4],r11
+80000dce:	30 1b       	mov	r11,1
+80000dd0:	a5 6b       	lsl	r11,0x4
+80000dd2:	99 9b       	st.w	r12[0x24],r11
+80000dd4:	d2 02       	popm	r12
+80000dd6:	f0 1f 00 22 	mcall	80000e5c <timerClearInterrupt+0x18>
+80000dda:	d5 02       	popm	r11,lr
+80000ddc:	1c 9f       	mov	pc,lr
+
+80000dde <timerReset>:
+80000dde:	d3 01       	pushm	r11-r12
+80000de0:	e0 6c 38 00 	mov	r12,14336
+80000de4:	ea 1c ff ff 	orh	r12,0xffff
+80000de8:	30 5b       	mov	r11,5
+80000dea:	99 0b       	st.w	r12[0x0],r11
+80000dec:	e0 6b 00 08 	mov	r11,8
+80000df0:	ea 1b 00 00 	orh	r11,0x0
+80000df4:	76 0b       	ld.w	r11,r11[0x0]
+80000df6:	99 7b       	st.w	r12[0x1c],r11
+80000df8:	d3 02       	popm	r11-r12
+80000dfa:	1c 9f       	mov	pc,lr
+
+80000dfc <timerStop>:
+80000dfc:	d3 01       	pushm	r11-r12
+80000dfe:	e0 6c 38 00 	mov	r12,14336
+80000e02:	ea 1c ff ff 	orh	r12,0xffff
+80000e06:	30 2b       	mov	r11,2
+80000e08:	99 0b       	st.w	r12[0x0],r11
+80000e0a:	d3 02       	popm	r11-r12
+80000e0c:	1c 9f       	mov	pc,lr
+
+80000e0e <timerRCSet>:
+80000e0e:	d3 01       	pushm	r11-r12
+80000e10:	49 4b       	lddpc	r11,80000e60 <timerClearInterrupt+0x1c>
+80000e12:	97 0c       	st.w	r11[0x0],r12
+80000e14:	e0 6c 38 00 	mov	r12,14336
+80000e18:	ea 1c ff ff 	orh	r12,0xffff
+80000e1c:	76 0b       	ld.w	r11,r11[0x0]
+80000e1e:	99 7b       	st.w	r12[0x1c],r11
+80000e20:	d3 02       	popm	r11-r12
+80000e22:	1c 9f       	mov	pc,lr
+
+80000e24 <timerPrescaleSet>:
+80000e24:	d3 81       	pushm	r10-r12
+80000e26:	49 0b       	lddpc	r11,80000e64 <timerClearInterrupt+0x20>
+80000e28:	97 0c       	st.w	r11[0x0],r12
+80000e2a:	e0 6c 38 00 	mov	r12,14336
+80000e2e:	ea 1c ff ff 	orh	r12,0xffff
+80000e32:	78 1a       	ld.w	r10,r12[0x4]
+80000e34:	3f 8b       	mov	r11,-8
+80000e36:	16 6a       	and	r10,r11
+80000e38:	48 bb       	lddpc	r11,80000e64 <timerClearInterrupt+0x20>
+80000e3a:	76 0b       	ld.w	r11,r11[0x0]
+80000e3c:	14 4b       	or	r11,r10
+80000e3e:	99 1b       	st.w	r12[0x4],r11
+80000e40:	d3 82       	popm	r10-r12
+80000e42:	1c 9f       	mov	pc,lr
+
+80000e44 <timerClearInterrupt>:
+80000e44:	d2 01       	pushm	r12
+80000e46:	e0 6c 38 00 	mov	r12,14336
+80000e4a:	ea 1c ff ff 	orh	r12,0xffff
+80000e4e:	78 8c       	ld.w	r12,r12[0x20]
+80000e50:	d2 02       	popm	r12
+80000e52:	1c 9f       	mov	pc,lr
+80000e54:	80 00       	ld.sh	r0,r0[0x0]
+80000e56:	11 66       	ld.uh	r6,--r8
+80000e58:	80 00       	ld.sh	r0,r0[0x0]
+80000e5a:	0e 44       	or	r4,r7
+80000e5c:	80 00       	ld.sh	r0,r0[0x0]
+80000e5e:	07 88       	ld.ub	r8,r3[0x0]
+80000e60:	00 00       	add	r0,r0
+80000e62:	00 08       	add	r8,r0
+80000e64:	00 00       	add	r0,r0
+80000e66:	00 0c       	add	r12,r0
+
+80000e68 <_stext>:
+80000e68:	49 7d       	lddpc	sp,80000ec4 <udata_end+0x4>
+80000e6a:	49 80       	lddpc	r0,80000ec8 <udata_end+0x8>
+80000e6c:	1a d0       	st.w	--sp,r0
+80000e6e:	e5 cd 20 00 	ldmts	sp,sp
+80000e72:	1b 00       	ld.w	r0,sp++
+80000e74:	49 60       	lddpc	r0,80000ecc <udata_end+0xc>
+80000e76:	e3 b0 00 01 	mtsr	0x4,r0
+80000e7a:	d5 53       	csrf	0x15
+80000e7c:	e0 6c 0c 00 	mov	r12,3072
+80000e80:	ea 1c ff ff 	orh	r12,0xffff
+80000e84:	e0 6b 01 07 	mov	r11,263
+80000e88:	99 ab       	st.w	r12[0x28],r11
+80000e8a:	30 4b       	mov	r11,4
+80000e8c:	99 0b       	st.w	r12[0x0],r11
+80000e8e:	e0 6a 00 80 	mov	r10,128
+
+80000e92 <xw8>:
+80000e92:	79 5b       	ld.w	r11,r12[0x54]
+80000e94:	14 7b       	tst	r11,r10
+80000e96:	cf e0       	breq	80000e92 <xw8>
+80000e98:	30 5b       	mov	r11,5
+80000e9a:	99 0b       	st.w	r12[0x0],r11
+
+80000e9c <idata_>:
+80000e9c:	48 d0       	lddpc	r0,80000ed0 <udata_end+0x10>
+80000e9e:	48 e1       	lddpc	r1,80000ed4 <udata_end+0x14>
+80000ea0:	02 30       	cp.w	r0,r1
+80000ea2:	c0 62       	brcc	80000eae <idata_end>
+80000ea4:	48 d2       	lddpc	r2,80000ed8 <udata_end+0x18>
+
+80000ea6 <idata_loop>:
+80000ea6:	05 04       	ld.w	r4,r2++
+80000ea8:	00 a4       	st.w	r0++,r4
+80000eaa:	02 30       	cp.w	r0,r1
+80000eac:	cf d3       	brcs	80000ea6 <idata_loop>
+
+80000eae <idata_end>:
+80000eae:	48 c0       	lddpc	r0,80000edc <udata_end+0x1c>
+80000eb0:	48 c1       	lddpc	r1,80000ee0 <udata_end+0x20>
+80000eb2:	02 30       	cp.w	r0,r1
+80000eb4:	c0 62       	brcc	80000ec0 <udata_end>
+80000eb6:	30 02       	mov	r2,0
+80000eb8:	30 03       	mov	r3,0
+
+80000eba <udata_loop>:
+80000eba:	00 a2       	st.w	r0++,r2
+80000ebc:	02 30       	cp.w	r0,r1
+80000ebe:	cf e3       	brcs	80000eba <udata_loop>
+
+80000ec0 <udata_end>:
+80000ec0:	48 9f       	lddpc	pc,80000ee4 <udata_end+0x24>
+80000ec2:	00 00       	add	r0,r0
+80000ec4:	00 01       	add	r1,r0
+80000ec6:	00 00       	add	r0,r0
+80000ec8:	00 00       	add	r0,r0
+80000eca:	f0 00       	*unknown*
+80000ecc:	80 00       	ld.sh	r0,r0[0x0]
+80000ece:	10 00       	add	r0,r8
+80000ed0:	00 00       	add	r0,r0
+80000ed2:	00 08       	add	r8,r0
+80000ed4:	00 00       	add	r0,r0
+80000ed6:	00 10       	sub	r0,r0
+80000ed8:	80 00       	ld.sh	r0,r0[0x0]
+80000eda:	14 20       	rsub	r0,r10
+80000edc:	00 00       	add	r0,r0
+80000ede:	00 10       	sub	r0,r0
+80000ee0:	00 00       	add	r0,r0
+80000ee2:	04 88       	andn	r8,r2
+80000ee4:	80 00       	ld.sh	r0,r0[0x0]
+80000ee6:	02 14       	sub	r4,r1
+
+Disassembly of section .exception:
+
+80001000 <_evba>:
+	...
+
+80001028 <_handle_Privilege_Violation>:
+	.global _evba
+	.type _evba, @function
+_evba:
+	.org  0x28
+_handle_Privilege_Violation:
+	rjmp privilegedCalls					//Check for legal priviledged calls.
+80001028:	c7 a8       	rjmp	8000111c <privilegedCalls>
+	...
+
+80001100 <_handle_Supervisor_Call>:
+
+	.org  0x100
+_handle_Supervisor_Call:
+	mov pc,lr								//ROSA Kernel function calls pass through here.
+80001100:	1c 9f       	mov	pc,lr
+
+80001102 <_int0>:
+ *  in this case: timerISR().
+ *
+ **********************************************************/
+	//TC0 interrupt
+_int0:
+	mov r12,lo(AVR32_INTC_ADDRESS)
+80001102:	e0 6c 08 00 	mov	r12,2048
+	orh r12,hi(AVR32_INTC_ADDRESS)
+80001106:	ea 1c ff ff 	orh	r12,0xffff
+	ld.w r12,r12[AVR32_INTC_IRR + GRP14]	//TC irq grp is at GRP14
+8000110a:	f8 fc 01 38 	ld.w	r12,r12[312]
+	andl r12,LINE0							//TC0 irq is at line 0
+8000110e:	e0 1c 00 01 	andl	r12,0x1
+	cp.w r12,LINE0							//Is line 0 sending interrupt signal?
+80001112:	58 1c       	cp.w	r12,1
+	brne _int0_exit							//No, exit
+80001114:	c0 31       	brne	8000111a <_int0_exit>
+	lda.w r12,timerISR						//Pointer to the timer ISR
+80001116:	4b 9c       	lddpc	r12,800011f8 <contextRestoreFromISR+0x40>
+	mov pc,r12								//Yes, go to the ISR.
+80001118:	18 9f       	mov	pc,r12
+
+8000111a <_int0_exit>:
+_int0_exit:
+	rete
+8000111a:	d6 03       	rete
+
+8000111c <privilegedCalls>:
+//------------------------------------
+//USERSR - user SR at the offending instant
+//USERPC - user PC which contain the offending instruction
+
+	//Investigate is this is a legal disable/enable interrupt requests
+	pushm r11,r12
+8000111c:	d3 01       	pushm	r11-r12
+	ld.w r11,sp[USERPC]
+8000111e:	7a 3b       	ld.w	r11,sp[0xc]
+	mov r12,r11
+80001120:	16 9c       	mov	r12,r11
+	sub r12,-0x02							//Modify to get return address
+80001122:	2f ec       	sub	r12,-2
+	st.w sp[USERPC],r12						//Put return address on the stack
+80001124:	9b 3c       	st.w	sp[0xc],r12
+
+80001126 <priv_interruptdisable>:
+
+	//Look for interruptDisable
+priv_interruptdisable:
+	lda.w r12,interruptDisable
+80001126:	4b 6c       	lddpc	r12,800011fc <contextRestoreFromISR+0x44>
+	cp.w r11,r12
+80001128:	18 3b       	cp.w	r11,r12
+	brne priv_interruptenable
+8000112a:	c0 61       	brne	80001136 <priv_interruptenable>
+	ld.w r12,sp[USERSR]
+8000112c:	7a 2c       	ld.w	r12,sp[0x8]
+	sbr r12,AVR32_SR_GM						//Ok, disable interrupts
+8000112e:	b1 ac       	sbr	r12,0x10
+	st.w sp[USERSR],r12
+80001130:	9b 2c       	st.w	sp[0x8],r12
+	popm r11,r12
+80001132:	d3 02       	popm	r11-r12
+	rete
+80001134:	d6 03       	rete
+
+80001136 <priv_interruptenable>:
+
+	//Look for interruptEnable
+priv_interruptenable:
+	lda.w r12,interruptEnable
+80001136:	4b 3c       	lddpc	r12,80001200 <contextRestoreFromISR+0x48>
+	cp.w r11,r12
+80001138:	18 3b       	cp.w	r11,r12
+	brne privexception
+8000113a:	c0 61       	brne	80001146 <privexception>
+	ld.w r12,sp[USERSR]
+8000113c:	7a 2c       	ld.w	r12,sp[0x8]
+	cbr r12,AVR32_SR_GM						//Ok, enable interrupts
+8000113e:	b1 cc       	cbr	r12,0x10
+	st.w sp[USERSR],r12
+80001140:	9b 2c       	st.w	sp[0x8],r12
+	popm r11,r12
+80001142:	d3 02       	popm	r11-r12
+	rete
+80001144:	d6 03       	rete
+
+80001146 <privexception>:
+
+privexception:								//Not ok.
+	rjmp $									//End here as we received an illegal privileged call.
+80001146:	c0 08       	rjmp	80001146 <privexception>
+
+80001148 <interruptInit>:
+ *
+ * C prototypes:
+ * 	extern void interruptInit(void);
+ **********************************************************/
+interruptInit:
+	pushm r11,r12,lr
+80001148:	d7 01       	pushm	r11-r12,lr
+	//Get autovector offset to _int0
+	lda.w r11,_int0
+8000114a:	fe cb 00 48 	sub	r11,pc,72
+	lda.w r12,_evba
+8000114e:	4a ec       	lddpc	r12,80001204 <contextRestoreFromISR+0x4c>
+	sub r11,r12
+80001150:	18 1b       	sub	r11,r12
+
+	//Calculate int level
+	mov r12,INTLEVEL0
+80001152:	30 0c       	mov	r12,0
+	or r11,r11,r12 << INTLEVEL_OFFSET
+80001154:	f7 ec 11 eb 	or	r11,r11,r12<<0x1e
+
+	//Store the _int0 level and autovector offset to the interrupt priority register
+	mov r12,lo(AVR32_INTC_ADDRESS+GRP14)
+80001158:	e0 6c 08 38 	mov	r12,2104
+	orh r12,hi(AVR32_INTC_ADDRESS+GRP14)
+8000115c:	ea 1c ff ff 	orh	r12,0xffff
+	st.w r12,r11
+80001160:	99 0b       	st.w	r12[0x0],r11
+	popm r11,r12,lr
+80001162:	d7 02       	popm	r11-r12,lr
+	mov pc,lr
+80001164:	1c 9f       	mov	pc,lr
+
+80001166 <interruptDisable>:
+ * C prototype:
+ * 	void interruptDisable(void);
+ *
+ *********************************************************/
+interruptDisable:
+	ssrf AVR32_SR_GM
+80001166:	d3 03       	ssrf	0x10
+	mov pc,lr
+80001168:	1c 9f       	mov	pc,lr
+
+8000116a <interruptEnable>:
+ * C prototype:
+ * 	void interruptEnable(void);
+ *
+ *********************************************************/
+interruptEnable:
+	csrf AVR32_SR_GM
+8000116a:	d5 03       	csrf	0x10
+	mov pc,lr
+8000116c:	1c 9f       	mov	pc,lr
+
+8000116e <isInterruptEnabled>:
+ * C prototype:
+ * 	int isInterruptEnabled(void);
+ *
+ *********************************************************/
+isInterruptEnabled:
+	mfsr r12,0
+8000116e:	e1 bc 00 00 	mfsr	r12,0x0
+	lsr r12,AVR32_SR_GM
+80001172:	b1 8c       	lsr	r12,0x10
+	andl r12,TRUE
+80001174:	e0 1c 00 01 	andl	r12,0x1
+	eorl r12,TRUE
+80001178:	ec 1c 00 01 	eorl	r12,0x1
+	mov pc,lr
+8000117c:	1c 9f       	mov	pc,lr
+
+8000117e <contextSaveFromISR>:
+.equ SFINT0_R9, 0x06*0x04+SFINT0OFFSET
+.equ SFINT0_R8, 0x07*0x04+SFINT0OFFSET
+
+contextSaveFromISR:
+	//Fetch the current executing task
+	lda.w r12,EXECTASK
+8000117e:	4a 3c       	lddpc	r12,80001208 <contextRestoreFromISR+0x50>
+	ld.w r12,r12[0x0]
+80001180:	78 0c       	ld.w	r12,r12[0x0]
+
+	//Save working registers
+	st.w r12[TCB.SAVER0],r0
+80001182:	99 60       	st.w	r12[0x18],r0
+	ld.w r0,sp[SFINT0_R12]
+80001184:	7a 90       	ld.w	r0,sp[0x24]
+	st.w r12[TCB.SAVEREG.R12],r0
+80001186:	99 c0       	st.w	r12[0x30],r0
+
+	//Save SR
+	ld.w r0,sp[SFINT0_SR]
+80001188:	7a 60       	ld.w	r0,sp[0x18]
+	st.w r12[TCB.SAVESR],r0
+8000118a:	99 80       	st.w	r12[0x20],r0
+
+	//Read register from the stack
+	ld.w r8,sp[SFINT0_R8]
+8000118c:	7a d8       	ld.w	r8,sp[0x34]
+	ld.w r9,sp[SFINT0_R9]
+8000118e:	7a c9       	ld.w	r9,sp[0x30]
+	ld.w r10,sp[SFINT0_R10]
+80001190:	7a ba       	ld.w	r10,sp[0x2c]
+	ld.w r11,sp[SFINT0_R11]
+80001192:	7a ab       	ld.w	r11,sp[0x28]
+
+	//Save registers
+	mov r0,TCB.SAVEREG.R11
+80001194:	33 40       	mov	r0,52
+	add r0,r12
+80001196:	18 00       	add	r0,r12
+	stmts r0,r0-r11
+80001198:	ed c0 0f ff 	stmts	r0,r0-r11
+
+	//Save r7_task
+	ld.w r0,sp[SFINT0_R7_TASK]
+8000119c:	7a 50       	ld.w	r0,sp[0x14]
+	st.w r12[TCB.SAVEREG.R7],r0
+8000119e:	f9 40 00 44 	st.w	r12[68],r0
+
+	//Save RETADDR
+	ld.w r0,sp[SFINT0_PC]
+800011a2:	7a 70       	ld.w	r0,sp[0x1c]
+	st.w r12[TCB.RETADDR],r0
+800011a4:	99 90       	st.w	r12[0x24],r0
+
+	//Save LR
+	ld.w r0,sp[SFINT0_LR]			//This points back to the task
+800011a6:	7a 80       	ld.w	r0,sp[0x20]
+	st.w r12[TCB.SAVEREG.LR],r0
+800011a8:	99 a0       	st.w	r12[0x28],r0
+
+	//Save USP
+	mov r0,sp
+800011aa:	1a 90       	mov	r0,sp
+	st.w --sp,r0
+800011ac:	1a d0       	st.w	--sp,r0
+	stmts sp,sp
+800011ae:	ed cd 20 00 	stmts	sp,sp
+	ld.w r0,sp++
+800011b2:	1b 00       	ld.w	r0,sp++
+	st.w r12[TCB.SAVEUSP],r0
+800011b4:	99 50       	st.w	r12[0x14],r0
+
+	mov pc,lr
+800011b6:	1c 9f       	mov	pc,lr
+
+800011b8 <contextRestoreFromISR>:
+* Context of the TCB referenced by EXECTASK will be restored.
+*
+*********************************************************/
+contextRestoreFromISR:
+	//Fetch the current executing task
+	lda.w r12,EXECTASK
+800011b8:	49 4c       	lddpc	r12,80001208 <contextRestoreFromISR+0x50>
+	ld.w r12,r12[0x0]
+800011ba:	78 0c       	ld.w	r12,r12[0x0]
+
+	//Restore USP
+	ld.w r0,r12[TCB.SAVEUSP]
+800011bc:	78 50       	ld.w	r0,r12[0x14]
+	st.w --sp,r0
+800011be:	1a d0       	st.w	--sp,r0
+	ldmts sp,sp
+800011c0:	e5 cd 20 00 	ldmts	sp,sp
+	ld.w r0,sp++							//USP is in r0
+800011c4:	1b 00       	ld.w	r0,sp++
+
+	//Restore LR
+	ld.w r0,r12[TCB.SAVEREG.LR]
+800011c6:	78 a0       	ld.w	r0,r12[0x28]
+	st.w sp[SFINT0_LR],r0					//Restore lr on the stack
+800011c8:	9b 80       	st.w	sp[0x20],r0
+
+	//Restore RETADDR
+	ld.w r0,r12[TCB.RETADDR]
+800011ca:	78 90       	ld.w	r0,r12[0x24]
+	st.w sp[SFINT0_PC],r0					//Restore return address on stack
+800011cc:	9b 70       	st.w	sp[0x1c],r0
+
+	//Restore registers
+	mov r0,TCB.SAVEREG.R11
+800011ce:	33 40       	mov	r0,52
+	add r0,r12
+800011d0:	18 00       	add	r0,r12
+	ldmts r0,r0-r11
+800011d2:	e5 c0 0f ff 	ldmts	r0,r0-r11
+
+	//Restore SR
+	ld.w r0,r12[TCB.SAVESR]
+800011d6:	78 80       	ld.w	r0,r12[0x20]
+	st.w sp[SFINT0_SR],r0					//Put the new SR on the stack
+800011d8:	9b 60       	st.w	sp[0x18],r0
+
+	//Restore of R8-R12
+	ld.w r0,r12[TCB.SAVEREG.R12]
+800011da:	78 c0       	ld.w	r0,r12[0x30]
+	st.w sp[SFINT0_R12],r0
+800011dc:	9b 90       	st.w	sp[0x24],r0
+	st.w sp[SFINT0_R11],r11
+800011de:	9b ab       	st.w	sp[0x28],r11
+	st.w sp[SFINT0_R10],r10
+800011e0:	9b ba       	st.w	sp[0x2c],r10
+	st.w sp[SFINT0_R9],r9
+800011e2:	9b c9       	st.w	sp[0x30],r9
+	st.w sp[SFINT0_R8],r8
+800011e4:	9b d8       	st.w	sp[0x34],r8
+
+	//Restore r7
+	ld.w r0,r12[TCB.SAVEREG.R7]				//This is the r7_user
+800011e6:	79 10       	ld.w	r0,r12[0x44]
+	st.w sp[SFINT0_R7_TASK],r0				//Save r7_user to the stack, in order to not have the r7_user destroyed.
+800011e8:	9b 50       	st.w	sp[0x14],r0
+
+	//Restore work registers
+	ld.w r0,r12[TCB.SAVER0]
+800011ea:	78 60       	ld.w	r0,r12[0x18]
+
+	//Restart timer 0, necessary as timer is stopped by the irq event.
+	pushm lr
+800011ec:	d4 01       	pushm	lr
+	call timerStart
+800011ee:	f0 1f 00 08 	mcall	8000120c <contextRestoreFromISR+0x54>
+	popm lr
+800011f2:	d4 02       	popm	lr
+
+	//Return back to the ISR handler
+	mov pc,lr
+800011f4:	1c 9f       	mov	pc,lr
+800011f6:	00 00       	add	r0,r0
+800011f8:	80 00       	ld.sh	r0,r0[0x0]
+800011fa:	07 38       	ld.ub	r8,r3++
+800011fc:	80 00       	ld.sh	r0,r0[0x0]
+800011fe:	11 66       	ld.uh	r6,--r8
+80001200:	80 00       	ld.sh	r0,r0[0x0]
+80001202:	11 6a       	ld.uh	r10,--r8
+80001204:	80 00       	ld.sh	r0,r0[0x0]
+80001206:	10 00       	add	r0,r8
+80001208:	00 00       	add	r0,r0
+8000120a:	04 80       	andn	r0,r2
+8000120c:	80 00       	ld.sh	r0,r0[0x0]
+8000120e:	0d de       	ld.ub	lr,r6[0x5]
+	...
