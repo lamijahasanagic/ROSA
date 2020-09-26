@@ -12,6 +12,10 @@ The Complete Requirements Analysis Document can be found in \ROSA\RAD
 
 The Complete Application Programming Interface can be found in \ROSA\API
 
+## Final Project Report 
+
+The Final Project Report can be found in \ROSA\FPR
+
 ## Execution
 
 ### Execution in AVR32 Studio:
